@@ -1,8 +1,9 @@
-import os, glob
+import os, glob, tqdm
+import multiprocessing as mp
 
-filesC = glob.glob("../sv-benchmarks/c/*/*.c")
-filesI = glob.glob("../sv-benchmarks/c/*/*.i")
-data = glob.glob("../data/*.txt")
+filesC = glob.glob("../data/sv-benchmarks/c/*/*.c")
+filesI = glob.glob("../data/sv-benchmarks/c/*/*.i")
+data = glob.glob("../data/raw/*.txt")
 files = []
 
 filesDone = []
@@ -28,11 +29,21 @@ for afile in files:
         files.remove(afile)
 print(len(files))
 
-badCount = 0
-for afile in files:
-    output = os.system("~/Workspace/llvm-project/build/bin/graph-builder "+afile+" > ../data/"+os.path.basename(afile)+".txt")
+
+def handler(filename):
+    output = os.system("timeout 300 ~/Workspace/llvm-project/build/bin/graph-builder "+filename+" > ../data/raw/"+os.path.basename(filename)+".txt 2>err.txt || exit 1")
     if output != 0:
-        badCount+=1
-        print("Oopsies. Bad file: "+ afile)
-        
-print(badCount)
+        return filename+"\n"
+    else:
+        return ""
+
+pool = mp.Pool(8)
+result_object = [pool.apply_async(handler, args=([aFile])) for aFile in files]
+
+results = [r.get() for r in tqdm.tqdm_gui(result_object)]
+
+pool.close()
+
+badFilesFile = open("badFiles.txt", 'w')
+for result in results:
+    badFilesFile.write(result)
