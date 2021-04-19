@@ -30,3 +30,10 @@ def modified_margin_rank_loss(scoresBatch, labelsBatch, lossTensor):
         trueComparison = torch.where(labelsBatch[:,i]>labelsBatch[:,j], 1, -1)
         lossTensor += abs(i-j)*loss_fn(scoresBatch[:,i], scoresBatch[:,j], trueComparison)
     return lossTensor
+
+def modified_margin_rank_loss_cuda(scoresBatch, labelsBatch, lossTensor):
+    loss_fn = MarginRankingLoss().cuda()
+    for i, j in itertools.combinations(list(range(len(labelsBatch[0]))),2):
+        trueComparison = torch.where(labelsBatch[:,i]>labelsBatch[:,j], 1, -1).cuda()
+        lossTensor += abs(i-j)*loss_fn(scoresBatch[:,i], scoresBatch[:,j], trueComparison)
+    return lossTensor
