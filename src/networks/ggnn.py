@@ -51,9 +51,9 @@ class GGNN(nn.Module):
         the scores
         """
         for _ in range(self.passes):   
-            inputs = []
-            nodesBatchCopy = copy.deepcopy(nodesBatch)
+            nodesBatchCopy = copy.copy(nodesBatch)
             for i in range(len(nodesBatch)):
+                inputs = []
                 edge_dict = backwards_edge_dictBatch[i]
                 for node_spot in range(len(nodesBatch[i])):
                     input1 = self.collect_incoming(node_spot, nodesBatchCopy[i], edge_dict)
@@ -95,7 +95,7 @@ def my_collate(batch):
 
     return ((tokens, problemClass, backwards_edge_dict), labels)
 
-def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, num_epochs):
+def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
     start = time.time()
 
     train_loader = torch.utils.data.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True, collate_fn=my_collate)
@@ -106,12 +106,12 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, num_epoc
 
     for epoch in range(0, num_epochs):
         corr_sum = 0.0
+        corr_sums = [0.0,0.0,0.0,0.0]
+        counters = [0,0,0,0]
         cum_loss = 0.0
 
         model.train()
         for (i, ((tokenSets, problemTypes, backwards_edge_dicts), labels)) in enumerate(tqdm.tqdm(train_loader)):
-            incoming = [torch.zeros(150)]*len(tokenSets)
-
             scores = model(problemTypes, tokenSets, backwards_edge_dicts)
             lossTensor = torch.FloatTensor([0])
             loss = loss_fn(scores, labels, lossTensor)
@@ -119,6 +119,8 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, num_epoc
 
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
+                corr_sums[problemTypes[j]]+=corr
+                counters[problemTypes[j]]+=1
                 corr_sum+=corr
                 assert(corr <=1)
             # maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
@@ -129,8 +131,16 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, num_epoc
             loss.backward()
             optimizer.step()
 
-            if (i+1) % 10 == 0 or (i+1)==len(train_loader):
-                print("Train-epoch", epoch, ". Iteration", i+1, "/", len(train_loader), ", Avg-Loss:", round(cum_loss/(i+1),4), "Avg-Corr:", round(corr_sum/((i+1)*batchSize),4))
+            # if (i+1) % 10 == 0 or (i+1)==len(train_loader):
+            #     print("Train-epoch", epoch, ". Iteration", i+1, "/", len(train_loader), ", Avg-Loss:", round(cum_loss/(i+1),4), "Avg-Corr:", round(corr_sum/((i+1)*batchSize),4))
+            #     if counters[0] > 0:
+            #         print("No Overflow Avg-Corr:", round(corr_sums[0]/counters[0],4))
+            #     if counters[1] > 0:
+            #         print("Unreach-Call Avg-Corr:", round(corr_sums[1]/counters[1],4))
+            #     if counters[2] > 0:    
+            #         print("Termination Avg-Corr:", round(corr_sums[2]/counters[2],4))
+            #     if counters[3] > 0:
+            #         print("Mem Valid Avg-Corr:", round(corr_sums[3]/counters[3],4))
             train_accuracies.append(round(corr_sum/((i+1)*batchSize),4))
             train_losses.append(round(cum_loss/(i+1),4))
 
@@ -146,8 +156,9 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, num_epoc
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum += corr
-        val_accuracies.append(corr_sum/len(valset))
-        val_losses.append(cum_loss/(i+1))
+            val_accuracies.append(corr_sum/len(valset))
+            val_losses.append(cum_loss/(i+1))
+        scheduler.step(cum_loss/(i+1))
 
         print("Validation-epoch", epoch, "Avg-Loss:", round(cum_loss/(i+1),4), ", Avg-Corr:", round(corr_sum/(len(valset)),4))
     
