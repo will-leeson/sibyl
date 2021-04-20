@@ -4,7 +4,7 @@ import torch.nn.functional as f
 from scipy.stats import spearmanr
 
 class GGNN(nn.Module):
-    def __init__(self, passes, numEdgeSets):
+    def __init__(self, passes, numEdgeSets, hiddenSize):
         super(GGNN, self).__init__()
         self.passes = passes
         if self.passes > 0:
@@ -12,8 +12,8 @@ class GGNN(nn.Module):
             self.edgeNets = []
             for item in range(numEdgeSets):
                 self.edgeNets.append(nn.Linear(150,150))
-        self.fc1 = nn.Linear(151, 80)
-        self.fc2 = nn.Linear(80, 10)
+        self.fc1 = nn.Linear(151, hiddenSize)
+        self.fc2 = nn.Linear(hiddenSize, 10)
         #self.fc3 = nn.Linear(20,10)
     
     
@@ -159,6 +159,8 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             val_accuracies.append(corr_sum/len(valset))
             val_losses.append(cum_loss/(i+1))
         scheduler.step(cum_loss/(i+1))
+        if optimizer.param_groups[0]['lr']<1e-7:
+            break
 
         print("Validation-epoch", epoch, "Avg-Loss:", round(cum_loss/(i+1),4), ", Avg-Corr:", round(corr_sum/(len(valset)),4))
     
