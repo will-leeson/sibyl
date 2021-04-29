@@ -14,8 +14,8 @@ class GGNN(nn.Module):
             for item in range(numEdgeSets):
                 self.edgeNets.append(nn.Linear(150,150))
         self.fc1 = nn.Linear(151, 80)
-        self.fc2 = nn.Linear(80, 10)
-        # self.fc3 = nn.Linear(20,10)
+        self.fc2 = nn.Linear(80,80)
+        self.fcLast = nn.Linear(80, 10)
     
     
     def collect_incoming(self, node_spot, nodes, edges):
@@ -34,7 +34,7 @@ class GGNN(nn.Module):
         for edgeSet in edges:
             if node_spot in edges:
                 for edges1 in edges[node_spot]:
-                    incoming+=self.edgeNets[counter](nodes[edges1])
+                    incoming+=f.relu(self.edgeNets[counter](nodes[edges1]))
             counter+=1
         return incoming
 
@@ -50,6 +50,8 @@ class GGNN(nn.Module):
         Pass the graph feature vectors through two linear layers with a tanh activation function in between and return
         the scores
         """
+        device = problemClass.device.index
+        nodesBatch = nodesBatch[(len(nodesBatch)//torch.cuda.device_count()+1)*device:(len(nodesBatch)//torch.cuda.device_count()+1)*device+(len(nodesBatch)//torch.cuda.device_count())+1]
         for _ in range(self.passes):
             inputsList = []
             for i in range(len(nodesBatch)):
@@ -63,18 +65,22 @@ class GGNN(nn.Module):
             phase1 = torch.cuda.memory_allocated()
 
             for i in range(len(nodesBatch)):
-                nodesBatch[i] = f.relu(torch.nan_to_num(torch.log(self.gru(inputsList[i], nodesBatch[i].float()).sum(dim=0))))
+                nodesBatch[i] = self.gru(inputsList[i], nodesBatch[i].float())
                 #torch.cuda.empty_cache()
             del inputsList
 
+        for i in range(len(nodesBatch)):
+                nodesBatch[i] = nodesBatch[i].sum(dim=0)
+                nodesBatch[i] = torch.log(nodesBatch[i].float())
+                nodesBatch[i][torch.isnan(nodesBatch[i])] = 0
+                nodesBatch[i] = f.relu(nodesBatch[i])
         x = torch.stack(nodesBatch)
-        x = torch.cat((x, problemClass), dim=1)
+        x = torch.cat((x, problemClass.float()), dim=1)
         x = self.fc1(x)
-        x = f.leaky_relu(x) 
-#        x = torch.tanh(x)
+        x = f.leaky_relu(x)
         x = self.fc2(x)
-        #x = f.relu(x)
-        #x = self.fc3(x)
+        x = f.leaky_relu(x) 
+        x = self.fcLast(x)
         return x
 
 def my_collate(batch):
@@ -160,7 +166,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         cum_loss = 0.0
         model.eval()
 
-        for (i, ((tokenSets, problemTypes, backwards_edge_dicts), labels)) in enumerate(tqdm.tqdm(val_loader)):
+        for (i, ((tokenSets, problemTypes, backwards_edge_dicts), labels)) in enumerate((val_loader)):
             if cuda:
                 for item in range(len(tokenSets)):
                     tokenSets[item] = tokenSets[item].cuda()
@@ -173,12 +179,12 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum += corr
-            val_accuracies.append(corr_sum/len(valset))
             val_losses.append(cum_loss/(i+1))
         scheduler.step(cum_loss/(i+1))
         if optimizer.param_groups[0]['lr']<1e-7:
             break
         del lossTensor
+        val_accuracies.append(corr_sum/len(valset))
 
         print("Validation-epoch", epoch, "Avg-Loss:", round(cum_loss/(i+1),4), ", Avg-Corr:", round(corr_sum/(len(valset)),4))
     
