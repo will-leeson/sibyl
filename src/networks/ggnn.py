@@ -1,4 +1,4 @@
-import torch, copy, tqdm, time, copy
+import torch, copy, tqdm, time, copy, subprocess
 import torch.nn as nn
 import torch.nn.functional as f
 import gc
@@ -145,7 +145,8 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             optimizer.step()
 
             if (i+1) % 10 == 0 or (i+1)==len(train_loader):
-                print("Train-epoch", epoch, ". Iteration", i+1, "/", len(train_loader), ", Avg-Loss:", round(cum_loss/(i+1),4), ", Avg-Corr:", round(corr_sum/((i+1)*batchSize),4), ", Best Correct%:", round(bestCorrect/((i*batchSize)+len(tokenSets)),4), ", A correct%:", round(aCorrect/aCorrectPossible, 4))
+                mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/((i+1)*batchSize),4))+ ", Best Correct%:" +  str(round(bestCorrect/((i*batchSize)+len(tokenSets)),4)) + ", A correct%:" +  str(round(aCorrect/aCorrectPossible, 4))
+                subprocess.run("echo " + mystr, shell=True)
             train_accuracies.append(round(corr_sum/((i+1)*batchSize),4))
             train_losses.append(round(cum_loss/(i+1),4))
             del lossTensor
@@ -184,6 +185,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         val_best.append(bestCorrect/(len(valset)))
         val_correct.append(aCorrect/aCorrectPossible)
 
-        print("Validation-epoch", epoch, "Avg-Loss:", round(cum_loss/(i+1),4), ", Avg-Corr:", round(corr_sum/(len(valset)),4), "Best Correct%:", round(bestCorrect/(len(valset)),4), ", A correct%:", round(aCorrect/aCorrectPossible))
+        mystr = "Validation-epoch" + str(epoch) + "Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(valset)),4)) + "Best Correct%:" + str(round(bestCorrect/(len(valset)),4)) + ", A correct%:" +str(round(aCorrect/aCorrectPossible))
+        subprocess.run("echo " + mystr, shell=True)
     
     return train_accuracies, train_losses, val_accuracies, val_losses, val_best, val_correct
