@@ -98,19 +98,19 @@ def my_collate(batch):
     return ((tokens, problemClass, backwards_edge_dict), labels)
 
 def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs, cuda):
-    start = time.time()
-
     train_loader = torch.utils.data.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True, collate_fn=my_collate)
     val_loader = torch.utils.data.DataLoader(dataset=valset, batch_size=batchSize, shuffle=True, collate_fn=my_collate)
 
     train_accuracies = []; val_accuracies = []
     train_losses = []; val_losses = []
+    val_best = []; val_correct = []
 
     for epoch in range(0, num_epochs):
         corr_sum = 0.0
-        corr_sums = [0.0,0.0,0.0,0.0]
-        counters = [0,0,0,0]
         cum_loss = 0.0
+        bestCorrect = 0
+        aCorrect = 0
+        aCorrectPossible = 0
 
         model.train()
         for (i, ((tokenSets, problemTypes, backwards_edge_dicts), labels)) in enumerate(tqdm.tqdm(train_loader)):
@@ -125,45 +125,36 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             scores = model(problemTypes, tokenSets, backwards_edge_dicts, cuda)
             loss = loss_fn(scores, labels, lossTensor)
             cum_loss+=loss.cpu().detach().item()
-            # above = 0
-            # below = 0
 
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
-                corr_sums[problemTypes[j]]+=corr
-                counters[problemTypes[j]]+=1
                 corr_sum+=corr
-                # if corr > 0.8:
-                #     above+=1
-                # elif corr <0.2:
-                #     below +=1
                 assert(corr <=1)
+            bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
+            for _ in range(len(scores)):
+                if (scores[1]>0).sum():
+                    aCorrect += (labels[0][scores[0].argmax()]>0).item()
+                    aCorrectPossible+=1
+            
             # maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
             # gather = labels.gather(1, maxScoresIdx)
             # corr_sum+=(gather>1).sum().item()
-            
-            # print("Above 0.8:",above)
-            # print("Below 0.2:",below)
+
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            if (i+1) % 100 == 0 or (i+1)==len(train_loader):
-                print("Train-epoch", epoch, ". Iteration", i+1, "/", len(train_loader), ", Avg-Loss:", round(cum_loss/(i+1),4), "Avg-Corr:", round(corr_sum/((i+1)*batchSize),4))
-            #     if counters[0] > 0:
-            #         print("No Overflow Avg-Corr:", round(corr_sums[0]/counters[0],4))
-            #     if counters[1] > 0:
-            #         print("Unreach-Call Avg-Corr:", round(corr_sums[1]/counters[1],4))
-            #     if counters[2] > 0:    
-            #         print("Termination Avg-Corr:", round(corr_sums[2]/counters[2],4))
-            #     if counters[3] > 0:
-            #         print("Mem Valid Avg-Corr:", round(corr_sums[3]/counters[3],4))
+            if (i+1) % 10 == 0 or (i+1)==len(train_loader):
+                print("Train-epoch", epoch, ". Iteration", i+1, "/", len(train_loader), ", Avg-Loss:", round(cum_loss/(i+1),4), ", Avg-Corr:", round(corr_sum/((i+1)*batchSize),4), ", Best Correct%:", round(bestCorrect/((i*batchSize)+len(tokenSets)),4), ", A correct%:", round(aCorrect/aCorrectPossible, 4))
             train_accuracies.append(round(corr_sum/((i+1)*batchSize),4))
             train_losses.append(round(cum_loss/(i+1),4))
             del lossTensor
 
         corr_sum = 0.0
         cum_loss = 0.0
+        bestCorrect = 0
+        aCorrect = 0
+        aCorrectPossible = 0
         model.eval()
 
         for (i, ((tokenSets, problemTypes, backwards_edge_dicts), labels)) in enumerate((val_loader)):
@@ -175,6 +166,11 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             scores = model(problemTypes, tokenSets, backwards_edge_dicts, cuda)
             lossTensor = torch.FloatTensor([0]).cuda()
             cum_loss+=loss_fn(scores, labels, lossTensor).cpu().detach().item()
+            bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
+            for i in range(len(scores)):
+                if (scores[1]>0).sum():
+                    aCorrect += (labels[0][scores[0].argmax()]>0).item()
+                    aCorrectPossible+=1
 
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
@@ -185,7 +181,9 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             break
         del lossTensor
         val_accuracies.append(corr_sum/len(valset))
+        val_best.append(bestCorrect/(len(valset)))
+        val_correct.append(aCorrect/aCorrectPossible)
 
-        print("Validation-epoch", epoch, "Avg-Loss:", round(cum_loss/(i+1),4), ", Avg-Corr:", round(corr_sum/(len(valset)),4))
+        print("Validation-epoch", epoch, "Avg-Loss:", round(cum_loss/(i+1),4), ", Avg-Corr:", round(corr_sum/(len(valset)),4), "Best Correct%:", round(bestCorrect/(len(valset)),4), ", A correct%:", round(aCorrect/aCorrectPossible))
     
-    return train_accuracies, train_losses, val_accuracies, val_losses, time.time()-start
+    return train_accuracies, train_losses, val_accuracies, val_losses, val_best, val_correct
