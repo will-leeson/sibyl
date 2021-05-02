@@ -12,8 +12,8 @@ class GGNN(nn.Module):
             self.gru = nn.GRUCell(150, 150)
             self.edgeNets = []
             for item in range(numEdgeSets):
-                self.edgeNets.append(nn.Linear(150,150))
-        self.fc1 = nn.Linear(151, 80)
+                self.edgeNets.append(nn.Linear(150,150).cuda())
+        self.fc1 = nn.Linear(150, 80)
         self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
     
@@ -30,18 +30,17 @@ class GGNN(nn.Module):
         a running sum
         """
         counter = 0
-        incoming = torch.zeros(150)
+        incoming = torch.zeros(150).cuda()
         for edgeSet in edges:
-            if node_spot in edges:
-                for edges1 in edges[node_spot]:
-                    incoming+=f.relu(self.edgeNets[counter](nodes[edges1]))
+            if str(node_spot) in edges[edgeSet]:
+                for edges1 in edges[edgeSet][str(node_spot)]:
+                    placeholder = self.edgeNets[counter](nodes[edges1].float())
+                    incoming+=f.relu(placeholder)
             counter+=1
         return incoming
 
-    def forward(self, problemClass, nodesBatch, backwards_edge_dictBatch):
+    def forward(self, nodesBatch, backwards_edge_dictBatch):
         """
-        problemClass: A batch of tensors that represent what kind of verification problem the scores correspond to
-        nodesBatch: A batch of sets of nodes. Each set represents a graph
         backwards_edge_dictBatch: A batch of dicts. Each key in the dict is a node, the value for each key is the nodes inset
         The forward function of the neural net. For each pass, perform the GGNN step: for each graph G, for each node N
         in G, collect the sum, S, of N's inset nodes. Pass N's representation with S. This is the new representation of N.
@@ -50,8 +49,14 @@ class GGNN(nn.Module):
         Pass the graph feature vectors through two linear layers with a tanh activation function in between and return
         the scores
         """
-        device = problemClass.device.index
-        nodesBatch = nodesBatch[(len(nodesBatch)//torch.cuda.device_count()+1)*device:(len(nodesBatch)//torch.cuda.device_count()+1)*device+(len(nodesBatch)//torch.cuda.device_count())+1]
+        if torch.cuda.device_count() >1:
+            device = nodesBatch[0].device.index
+            if device+1 == torch.cuda.device_count():
+                nodesBatch = nodesBatch[device*(len(nodesBatch)//torch.cuda.device_count()):]
+                backwards_edge_dictBatch = backwards_edge_dictBatch[device*(len(nodesBatch)//torch.cuda.device_count()):]
+            else:   
+                nodesBatch = nodesBatch[device*(len(nodesBatch)//torch.cuda.device_count()):(device+1)*(len(nodesBatch)//torch.cuda.device_count())]
+                backwards_edge_dictBatch = backwards_edge_dictBatch[device*(len(nodesBatch)//torch.cuda.device_count()):(device+1)*(len(nodesBatch)//torch.cuda.device_count())]
         for _ in range(self.passes):
             inputsList = []
             for i in range(len(nodesBatch)):
@@ -74,7 +79,6 @@ class GGNN(nn.Module):
                 nodesBatch[i][torch.isnan(nodesBatch[i])] = 0
                 nodesBatch[i] = f.relu(nodesBatch[i])
         x = torch.stack(nodesBatch)
-        x = torch.cat((x, problemClass), dim=1)
         x = self.fc1(x)
         x = f.leaky_relu(x)
         x = self.fc2(x)
@@ -88,13 +92,11 @@ def my_collate(batch):
     This is my collate function. There are many like it, but this one is mine
     """
     tokens = [item[0][0] for item in batch]
-    problemClass = [item[0][1]for item in batch]
-    problemClass = torch.stack(problemClass)
     backwards_edge_dict = [item[0][2] for item in batch]
     labels = [torch.tensor(item[1]) for item in batch]
     labels = torch.stack(labels)
 
-    return ((tokens, problemClass, backwards_edge_dict), labels)
+    return ((tokens, backwards_edge_dict), labels)
 
 def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
     train_loader = torch.utils.data.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True, collate_fn=my_collate)
@@ -112,14 +114,13 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         aCorrectPossible = 0
 
         model.train()
-        for (i, ((tokenSets, problemTypes, backwards_edge_dicts), labels)) in enumerate(tqdm.tqdm(train_loader)):
+        for (i, ((tokenSets, backwards_edge_dicts), labels)) in enumerate(tqdm.tqdm(train_loader)):
             lossTensor = torch.FloatTensor([0]).cuda()
             for item in range(len(tokenSets)):
                 tokenSets[item] = tokenSets[item].cuda()
-            problemTypes = problemTypes.cuda()
             labels = labels.cuda()
                 
-            scores = model(problemTypes, tokenSets, backwards_edge_dicts)
+            scores = model(tokenSets, backwards_edge_dicts)
             loss = loss_fn(scores, labels, lossTensor)
             cum_loss+=loss.cpu().detach().item()
 
@@ -152,12 +153,11 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         aCorrectPossible = 0
         model.eval()
 
-        for (i, ((tokenSets, problemTypes, backwards_edge_dicts), labels)) in enumerate((val_loader)):
+        for (i, ((tokenSets, backwards_edge_dicts), labels)) in enumerate((val_loader)):
             for item in range(len(tokenSets)):
                 tokenSets[item] = tokenSets[item].cuda()
-            problemTypes = problemTypes.cuda()
             labels = labels.cuda()
-            scores = model(problemTypes, tokenSets, backwards_edge_dicts)
+            scores = model(tokenSets, backwards_edge_dicts)
             lossTensor = torch.FloatTensor([0]).cuda()
             cum_loss+=loss_fn(scores, labels, lossTensor).cpu().detach().item()
             bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
