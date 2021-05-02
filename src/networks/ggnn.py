@@ -169,7 +169,6 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum += corr
-            val_losses.append(cum_loss/(i+1))
         scheduler.step(cum_loss/(i+1))
         if optimizer.param_groups[0]['lr']<1e-7:
             break
@@ -177,6 +176,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         val_accuracies.append(corr_sum/len(valset))
         val_best.append(bestCorrect/(len(valset)))
         val_correct.append(aCorrect/aCorrectPossible)
+        val_losses.append(cum_loss/(i+1))
 
         mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(valset)),4)) + ", Best Correct%:" + str(round(bestCorrect/(len(valset)),4)) + ", A correct%:" +str(round(aCorrect/aCorrectPossible))
         print(mystr)
