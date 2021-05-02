@@ -6,21 +6,29 @@ import os, json, itertools
 import numpy as np
 
 class GraphDataset(Dataset):
-    def __init__(self, labels, data_dir):
+    def __init__(self, labels, data_dir, edge_sets):
         self.labels = labels
         self.data_dir = data_dir
+        self.edge_sets=edge_sets
     
     def __len__(self):
         return len(self.labels)
     
     def __getitem__(self, idx):
-        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npz")
+        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npy")
         backwards_edge_dict = json.load(open(os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+"backwardsEdge.json")))
+        pop = []
+        for key in backwards_edge_dict:
+            if key not in self.edge_sets:
+                pop.append(key)
+        for key in pop:
+            backwards_edge_dict.pop(key)
+        
         label = self.labels[idx][1]
-        problemType = torch.tensor([int(self.labels[idx][0].split("|||")[1])])
+        problemType = torch.tensor([float(self.labels[idx][0].split("|||")[1])])
         
         data = np.load(path)
-        tokens = torch.from_numpy(data['node_rep'])
+        tokens = torch.from_numpy(data)
 
         return (tokens, problemType, backwards_edge_dict), label
 
