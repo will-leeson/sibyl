@@ -38,7 +38,7 @@ class GGNN(nn.Module):
             counter+=1
         return incoming
 
-    def forward(self, problemClass, nodesBatch, backwards_edge_dictBatch, cuda):
+    def forward(self, problemClass, nodesBatch, backwards_edge_dictBatch):
         """
         problemClass: A batch of tensors that represent what kind of verification problem the scores correspond to
         nodesBatch: A batch of sets of nodes. Each set represents a graph
@@ -62,7 +62,6 @@ class GGNN(nn.Module):
                     inputs.append(input1)
                 inputs = torch.stack(inputs)
                 inputsList.append(inputs.cuda())
-            phase1 = torch.cuda.memory_allocated()
 
             for i in range(len(nodesBatch)):
                 nodesBatch[i] = self.gru(inputsList[i], nodesBatch[i].float())
@@ -75,7 +74,7 @@ class GGNN(nn.Module):
                 nodesBatch[i][torch.isnan(nodesBatch[i])] = 0
                 nodesBatch[i] = f.relu(nodesBatch[i])
         x = torch.stack(nodesBatch)
-        x = torch.cat((x, problemClass.float()), dim=1)
+        x = torch.cat((x, problemClass), dim=1)
         x = self.fc1(x)
         x = f.leaky_relu(x)
         x = self.fc2(x)
@@ -97,7 +96,7 @@ def my_collate(batch):
 
     return ((tokens, problemClass, backwards_edge_dict), labels)
 
-def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs, cuda):
+def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
     train_loader = torch.utils.data.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True, collate_fn=my_collate)
     val_loader = torch.utils.data.DataLoader(dataset=valset, batch_size=batchSize, shuffle=True, collate_fn=my_collate)
 
@@ -114,15 +113,13 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
 
         model.train()
         for (i, ((tokenSets, problemTypes, backwards_edge_dicts), labels)) in enumerate(tqdm.tqdm(train_loader)):
-            lossTensor = torch.FloatTensor([0])
-            if cuda:
-                for item in range(len(tokenSets)):
-                    tokenSets[item] = tokenSets[item].cuda()
-                problemTypes = problemTypes.cuda()
-                labels = labels.cuda()
-                lossTensor = lossTensor.cuda()
+            lossTensor = torch.FloatTensor([0]).cuda()
+            for item in range(len(tokenSets)):
+                tokenSets[item] = tokenSets[item].cuda()
+            problemTypes = problemTypes.cuda()
+            labels = labels.cuda()
                 
-            scores = model(problemTypes, tokenSets, backwards_edge_dicts, cuda)
+            scores = model(problemTypes, tokenSets, backwards_edge_dicts)
             loss = loss_fn(scores, labels, lossTensor)
             cum_loss+=loss.cpu().detach().item()
 
@@ -131,22 +128,19 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                 corr_sum+=corr
                 assert(corr <=1)
             bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
-            for _ in range(len(scores)):
-                if (scores[1]>0).sum():
-                    aCorrect += (labels[0][scores[0].argmax()]>0).item()
-                    aCorrectPossible+=1
             
-            # maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
-            # gather = labels.gather(1, maxScoresIdx)
-            # corr_sum+=(gather>1).sum().item()
+            for j in range(len(scores)):
+                if (labels[j]>0).sum():
+                    aCorrect += (labels[j][scores[j].argmax()]>0).item()
+                    aCorrectPossible+=1
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            if (i+1) % 10 == 0 or (i+1)==len(train_loader):
+            if (i+1)==len(train_loader):
                 mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/((i+1)*batchSize),4))+ ", Best Correct%:" +  str(round(bestCorrect/((i*batchSize)+len(tokenSets)),4)) + ", A correct%:" +  str(round(aCorrect/aCorrectPossible, 4))
-                subprocess.run("echo " + mystr, shell=True)
+                print(mystr)
             train_accuracies.append(round(corr_sum/((i+1)*batchSize),4))
             train_losses.append(round(cum_loss/(i+1),4))
             del lossTensor
@@ -159,18 +153,17 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         model.eval()
 
         for (i, ((tokenSets, problemTypes, backwards_edge_dicts), labels)) in enumerate((val_loader)):
-            if cuda:
-                for item in range(len(tokenSets)):
-                    tokenSets[item] = tokenSets[item].cuda()
-                problemTypes = problemTypes.cuda()
-                labels = labels.cuda()
-            scores = model(problemTypes, tokenSets, backwards_edge_dicts, cuda)
+            for item in range(len(tokenSets)):
+                tokenSets[item] = tokenSets[item].cuda()
+            problemTypes = problemTypes.cuda()
+            labels = labels.cuda()
+            scores = model(problemTypes, tokenSets, backwards_edge_dicts)
             lossTensor = torch.FloatTensor([0]).cuda()
             cum_loss+=loss_fn(scores, labels, lossTensor).cpu().detach().item()
             bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
-            for i in range(len(scores)):
-                if (scores[1]>0).sum():
-                    aCorrect += (labels[0][scores[0].argmax()]>0).item()
+            for j in range(len(scores)):
+                if (labels[j]>0).sum():
+                    aCorrect += (labels[j][scores[j].argmax()]>0).item()
                     aCorrectPossible+=1
 
             for j in range(len(labels)):
@@ -185,7 +178,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         val_best.append(bestCorrect/(len(valset)))
         val_correct.append(aCorrect/aCorrectPossible)
 
-        mystr = "Validation-epoch" + str(epoch) + "Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(valset)),4)) + "Best Correct%:" + str(round(bestCorrect/(len(valset)),4)) + ", A correct%:" +str(round(aCorrect/aCorrectPossible))
-        subprocess.run("echo " + mystr, shell=True)
+        mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(valset)),4)) + ", Best Correct%:" + str(round(bestCorrect/(len(valset)),4)) + ", A correct%:" +str(round(aCorrect/aCorrectPossible))
+        print(mystr)
     
     return train_accuracies, train_losses, val_accuracies, val_losses, val_best, val_correct
