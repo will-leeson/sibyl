@@ -9,9 +9,9 @@ class GGNN(nn.Module):
         super(GGNN, self).__init__()
         self.passes = passes
         self.gru = nn.GRUCell(150, 150)
-        self.edgeNets = []
-        for i in range(numEdgeSets):
-            self.edgeNets.append(nn.Linear(150,150).cuda())
+        # self.edgeNets = []
+        # for i in range(numEdgeSets):
+        #     self.edgeNets.append(nn.Linear(150,150).cuda())
         self.fc1 = nn.Linear(150, 80)
         self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
@@ -52,8 +52,8 @@ class GGNN(nn.Module):
 
                 if collector:
                     collector = torch.stack(collector)
-                    collector = self.edgeNets[counter](collector)
-                    collector = f.relu(collector)
+                    # collector = self.edgeNets[counter](collector)
+                    # collector = f.relu(collector)
                     collector = collector.sum(dim=0)
                     incoming[node_spot]+=collector
 
@@ -109,7 +109,7 @@ def my_collate(batch):
     This is my collate function. There are many like it, but this one is mine
     """
     tokens = [item[0][0] for item in batch]
-    backwards_edge_dict = [item[0][2] for item in batch]
+    backwards_edge_dict = [item[0][1] for item in batch]
     labels = [torch.tensor(item[1]) for item in batch]
     labels = torch.stack(labels)
 
