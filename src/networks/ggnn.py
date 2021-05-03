@@ -1,24 +1,23 @@
 import torch, copy, tqdm, time, copy, subprocess
 import torch.nn as nn
 import torch.nn.functional as f
-import gc
+import gc, cProfile
 from scipy.stats import spearmanr
 
 class GGNN(nn.Module):
     def __init__(self, passes, numEdgeSets):
         super(GGNN, self).__init__()
         self.passes = passes
-        if self.passes > 0:
-            self.gru = nn.GRUCell(150, 150)
-            self.edgeNets = []
-            for item in range(numEdgeSets):
-                self.edgeNets.append(nn.Linear(150,150).cuda())
+        self.gru = nn.GRUCell(150, 150)
+        self.edgeNets = []
+        for i in range(numEdgeSets):
+            self.edgeNets.append(nn.Linear(150,150).cuda())
         self.fc1 = nn.Linear(150, 80)
         self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
     
     
-    def collect_incoming(self, node_spot, nodes, edges):
+    def collect_incoming(self, node_spot, nodes, edges, acc):
         """
         node_spot: The node we are collecting representations for
         nodes: All the nodes in the current graph
@@ -30,14 +29,36 @@ class GGNN(nn.Module):
         a running sum
         """
         counter = 0
-        incoming = torch.zeros(150).cuda()
+        incoming = acc[node_spot]
         for edgeSet in edges:
             if str(node_spot) in edges[edgeSet]:
                 for edges1 in edges[edgeSet][str(node_spot)]:
-                    placeholder = self.edgeNets[counter](nodes[edges1].float())
-                    incoming+=f.relu(placeholder)
+                    incoming+=self.edgeNet(nodes[edges1])
             counter+=1
         return incoming
+    
+    def collect_incomingPrime(self, nodes, edges):
+        repDict = dict(list(zip(list(range(len(nodes))),nodes)))
+
+        incoming = torch.zeros(len(nodes), 150).cuda()
+        for node_spot in range(len(nodes)):
+            counter = 0
+            for edgeSet in edges:
+                collector = []
+                if str(node_spot) in edges[edgeSet]:
+                    for edges1 in edges[edgeSet][str(node_spot)]:
+                        collector.append(repDict[edges1])
+
+                if collector:
+                    collector = torch.stack(collector)
+                    collector = self.edgeNets[counter](collector)
+                    collector = f.relu(collector)
+                    collector = collector.sum(dim=0)
+                    incoming[node_spot]+=collector
+
+                counter+=1
+        return incoming     
+
 
     def forward(self, nodesBatch, backwards_edge_dictBatch):
         """
@@ -60,13 +81,8 @@ class GGNN(nn.Module):
         for _ in range(self.passes):
             inputsList = []
             for i in range(len(nodesBatch)):
-                inputs = []
-                edge_dict = backwards_edge_dictBatch[i]
-                for node_spot in range(len(nodesBatch[i])):
-                    input1 = self.collect_incoming(node_spot, nodesBatch[i], edge_dict)
-                    inputs.append(input1)
-                inputs = torch.stack(inputs)
-                inputsList.append(inputs.cuda())
+                inputs = self.collect_incomingPrime(nodesBatch[i], backwards_edge_dictBatch[i])
+                inputsList.append(inputs)
 
             for i in range(len(nodesBatch)):
                 nodesBatch[i] = self.gru(inputsList[i], nodesBatch[i].float())
@@ -139,7 +155,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             loss.backward()
             optimizer.step()
 
-            if (i+1)==len(train_loader):
+            if i+1%100==0 or (i+1)==len(train_loader):
                 mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/((i+1)*batchSize),4))+ ", Best Correct%:" +  str(round(bestCorrect/((i*batchSize)+len(tokenSets)),4)) + ", A correct%:" +  str(round(aCorrect/aCorrectPossible, 4))
                 print(mystr)
             train_accuracies.append(round(corr_sum/((i+1)*batchSize),4))
@@ -170,8 +186,6 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum += corr
         scheduler.step(cum_loss/(i+1))
-        if optimizer.param_groups[0]['lr']<1e-7:
-            break
         del lossTensor
         val_accuracies.append(corr_sum/len(valset))
         val_best.append(bestCorrect/(len(valset)))
@@ -180,5 +194,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
 
         mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(valset)),4)) + ", Best Correct%:" + str(round(bestCorrect/(len(valset)),4)) + ", A correct%:" +str(round(aCorrect/aCorrectPossible))
         print(mystr)
+        if optimizer.param_groups[0]['lr']<1e-7:
+            break
     
     return train_accuracies, train_losses, val_accuracies, val_losses, val_best, val_correct
