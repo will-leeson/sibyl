@@ -39,6 +39,7 @@ class GGNN(nn.Module):
     
     def collect_incomingPrime(self, nodes, edges):
         repDict = dict(list(zip(list(range(len(nodes))),nodes)))
+        assert(len(repDict) == len(nodes))
 
         incoming = torch.zeros(len(nodes), 150).cuda()
         for node_spot in range(len(nodes)):
