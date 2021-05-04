@@ -85,11 +85,11 @@ class GGNN(nn.Module):
         for _ in range(self.passes):
             inputsList = []
             for i in range(len(nodesBatch)):
-                inputs = self.collect_incomingPrime(nodesBatch[i][0], backwards_edge_dictBatch[i][0])
+                inputs = self.collect_incomingPrime(nodesBatch[i], backwards_edge_dictBatch[i])
                 inputsList.append(inputs)
 
             for i in range(len(nodesBatch)):
-                nodesBatch[i] = self.gru(inputsList[i], nodesBatch[i][0])
+                nodesBatch[i] = self.gru(inputsList[i], nodesBatch[i])
                 #torch.cuda.empty_cache()
             del inputsList
 
@@ -111,8 +111,8 @@ def my_collate(batch):
     batch: a batch
     This is my collate function. There are many like it, but this one is mine
     """
-    tokens = [(item[0][0], item[0][1]) for item in batch]
-    backwards_edge_dict = [(item[0][2], item[0][1]) for item in batch]
+    tokens = [item[0][0] for item in batch]
+    backwards_edge_dict = [item[0][1] for item in batch]
     labels = [torch.tensor(item[1]) for item in batch]
     labels = torch.stack(labels)
 
@@ -137,9 +137,9 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         for (i, ((tokenSets, backwards_edge_dicts), labels)) in enumerate(tqdm.tqdm(train_loader)):
             lossTensor = torch.FloatTensor([0]).cuda()
             for item in range(len(tokenSets)):
-                tokenSets[item] = (tokenSets[item][0].cuda(), tokenSets[item][1])
+                tokenSets[item] = tokenSets[item].cuda()
             labels = labels.cuda()
-                
+
             scores = model(tokenSets, backwards_edge_dicts)
             loss = loss_fn(scores, labels, lossTensor)
             cum_loss+=loss.cpu().detach().item()

@@ -30,7 +30,7 @@ class GraphDataset(Dataset):
         data = np.load(path)
         tokens = torch.from_numpy(data).float()
 
-        return (tokens, idx, backwards_edge_dict), label
+        return (tokens, backwards_edge_dict), label
 
 def modified_margin_rank_loss(scoresBatch, labelsBatch, lossTensor):
     loss_fn = MarginRankingLoss(margin=0.1)
