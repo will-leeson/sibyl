@@ -1,5 +1,5 @@
 from ggnn import GGNN, train_model
-from utils.utils import GraphDataset, modified_margin_rank_loss_cuda, ListDataParallel
+from utils.utils import GraphDataset, modified_margin_rank_loss_cuda
 import torch, json, os, tqdm, sys, datetime, argparse
 import torch.nn as nn
 import torch.optim as optim
@@ -43,7 +43,7 @@ val_set = GraphDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
 model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets))
 if torch.cuda.device_count() > 1:
 	print("Multi-GPU Enabled")
-	model = ListDataParallel(model)
+	model = nn.DataParallel(model)
 model = model.cuda()
 
 loss_fn = modified_margin_rank_loss_cuda

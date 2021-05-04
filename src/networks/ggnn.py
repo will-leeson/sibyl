@@ -16,28 +16,7 @@ class GGNN(nn.Module):
         self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
     
-    
-    def collect_incoming(self, node_spot, nodes, edges, acc):
-        """
-        node_spot: The node we are collecting representations for
-        nodes: All the nodes in the current graph
-        edges: A dictionary of backwards_edges
-        incoming: A tensor that holds the sum of incoming edges
-        This function finds all nodes with an edge leading to the node
-        at node spot. It passes the nodes representation through the
-        linear layer that corresponds to their edge type and we keep
-        a running sum
-        """
-        counter = 0
-        incoming = acc[node_spot]
-        for edgeSet in edges:
-            if str(node_spot) in edges[edgeSet]:
-                for edges1 in edges[edgeSet][str(node_spot)]:
-                    incoming+=self.edgeNet(nodes[edges1])
-            counter+=1
-        return incoming
-    
-    def collect_incomingPrime(self, nodes, edges):
+    def collect_incoming(self, nodes, edges):
         repDict = dict(list(zip(list(range(len(nodes))),nodes)))
         assert(len(repDict) == len(nodes))
 
@@ -85,7 +64,7 @@ class GGNN(nn.Module):
         for _ in range(self.passes):
             inputsList = []
             for i in range(len(nodesBatch)):
-                inputs = self.collect_incomingPrime(nodesBatch[i], backwards_edge_dictBatch[i])
+                inputs = self.collect_incoming(nodesBatch[i], backwards_edge_dictBatch[i])
                 inputsList.append(inputs)
 
             for i in range(len(nodesBatch)):
