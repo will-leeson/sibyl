@@ -74,25 +74,28 @@ class GGNN(nn.Module):
         if torch.cuda.device_count() >1:
             device = nodesBatch[0].device.index
             if device+1 == torch.cuda.device_count():
-                nodesBatch = nodesBatch[device*(len(nodesBatch)//torch.cuda.device_count()):]
-                backwards_edge_dictBatch = backwards_edge_dictBatch[device*(len(nodesBatch)//torch.cuda.device_count()):]
+                frontIter = device*(len(nodesBatch)//torch.cuda.device_count())
+                nodesBatch = nodesBatch[frontIter:]
+                backwards_edge_dictBatch = backwards_edge_dictBatch[frontIter:]
             else:   
-                nodesBatch = nodesBatch[device*(len(nodesBatch)//torch.cuda.device_count()):(device+1)*(len(nodesBatch)//torch.cuda.device_count())]
-                backwards_edge_dictBatch = backwards_edge_dictBatch[device*(len(nodesBatch)//torch.cuda.device_count()):(device+1)*(len(nodesBatch)//torch.cuda.device_count())]
+                frontIter = device*(len(nodesBatch)//torch.cuda.device_count())
+                backIter = (device+1)*(len(nodesBatch)//torch.cuda.device_count())
+                nodesBatch = nodesBatch[frontIter:backIter]
+                backwards_edge_dictBatch = backwards_edge_dictBatch[frontIter:backIter]
         for _ in range(self.passes):
             inputsList = []
             for i in range(len(nodesBatch)):
-                inputs = self.collect_incomingPrime(nodesBatch[i], backwards_edge_dictBatch[i])
+                inputs = self.collect_incomingPrime(nodesBatch[i][0], backwards_edge_dictBatch[i][0])
                 inputsList.append(inputs)
 
             for i in range(len(nodesBatch)):
-                nodesBatch[i] = self.gru(inputsList[i], nodesBatch[i].float())
+                nodesBatch[i] = self.gru(inputsList[i], nodesBatch[i][0])
                 #torch.cuda.empty_cache()
             del inputsList
 
         for i in range(len(nodesBatch)):
                 nodesBatch[i] = nodesBatch[i].sum(dim=0)
-                nodesBatch[i] = torch.log(nodesBatch[i].float())
+                nodesBatch[i] = torch.log(nodesBatch[i])
                 nodesBatch[i][torch.isnan(nodesBatch[i])] = 0
                 nodesBatch[i] = f.relu(nodesBatch[i])
         x = torch.stack(nodesBatch)
@@ -108,12 +111,12 @@ def my_collate(batch):
     batch: a batch
     This is my collate function. There are many like it, but this one is mine
     """
-    tokens = [item[0][0] for item in batch]
-    backwards_edge_dict = [item[0][2] for item in batch]
+    tokens = [(item[0][0], item[0][1]) for item in batch]
+    backwards_edge_dict = [(item[0][2], item[0][1]) for item in batch]
     labels = [torch.tensor(item[1]) for item in batch]
     labels = torch.stack(labels)
 
-    return ((tokens, backwards_edge_dict), labels)
+    return (((tokens), backwards_edge_dict), labels)
 
 def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
     train_loader = torch.utils.data.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True, collate_fn=my_collate)
@@ -134,7 +137,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         for (i, ((tokenSets, backwards_edge_dicts), labels)) in enumerate(tqdm.tqdm(train_loader)):
             lossTensor = torch.FloatTensor([0]).cuda()
             for item in range(len(tokenSets)):
-                tokenSets[item] = tokenSets[item].cuda()
+                tokenSets[item] = (tokenSets[item][0].cuda(), tokenSets[item][1])
             labels = labels.cuda()
                 
             scores = model(tokenSets, backwards_edge_dicts)
