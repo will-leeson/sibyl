@@ -109,7 +109,7 @@ def my_collate(batch):
     This is my collate function. There are many like it, but this one is mine
     """
     tokens = [item[0][0] for item in batch]
-    backwards_edge_dict = [item[0][1] for item in batch]
+    backwards_edge_dict = [item[0][2] for item in batch]
     labels = [torch.tensor(item[1]) for item in batch]
     labels = torch.stack(labels)
 
