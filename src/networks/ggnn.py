@@ -50,17 +50,10 @@ class GGNN(nn.Module):
         Pass the graph feature vectors through two linear layers with a tanh activation function in between and return
         the scores
         """
-        if torch.cuda.device_count() >1:
-            device = nodesBatch[0].device.index
-            if device+1 == torch.cuda.device_count():
-                frontIter = device*(len(nodesBatch)//torch.cuda.device_count())
-                nodesBatch = nodesBatch[frontIter:]
-                backwards_edge_dictBatch = backwards_edge_dictBatch[frontIter:]
-            else:   
-                frontIter = device*(len(nodesBatch)//torch.cuda.device_count())
-                backIter = (device+1)*(len(nodesBatch)//torch.cuda.device_count())
-                nodesBatch = nodesBatch[frontIter:backIter]
-                backwards_edge_dictBatch = backwards_edge_dictBatch[frontIter:backIter]
+
+        for i in range(len(nodesBatch)):
+            nodesBatch[i] = nodesBatch[i].to(device=torch.cuda.current_device())
+
         for _ in range(self.passes):
             inputsList = []
             for i in range(len(nodesBatch)):
