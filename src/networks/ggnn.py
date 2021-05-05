@@ -50,9 +50,9 @@ class GGNN(nn.Module):
         Pass the graph feature vectors through two linear layers with a tanh activation function in between and return
         the scores
         """
-
+        device = torch.cuda.current_device()
         for i in range(len(nodesBatch)):
-            nodesBatch[i] = nodesBatch[i].to(device=torch.cuda.current_device())
+            nodesBatch[i] = nodesBatch[i].to(device)
 
         for _ in range(self.passes):
             inputsList = []
