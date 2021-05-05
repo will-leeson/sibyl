@@ -32,8 +32,6 @@ class GraphDataset(Dataset):
 
         return (tokens, backwards_edge_dict), label
 
-<<<<<<< HEAD
-=======
 def scatter(inputs, target_gpus, dim=0):
     def scatter_map(obj):
         if isinstance(obj, torch.Tensor):
@@ -66,7 +64,6 @@ class ListDataParallel(DataParallel):
     def scatter(self, inputs, kwargs, device_ids):
         return scatter_kwargs(inputs, kwargs, device_ids, dim=self.dim)
 
->>>>>>> 7718743245e1ae4ef113b9e4aeb750a5bd37a380
 def modified_margin_rank_loss(scoresBatch, labelsBatch, lossTensor):
     loss_fn = MarginRankingLoss(margin=0.1)
     for i, j in itertools.combinations(list(range(len(labelsBatch[0]))),2):
