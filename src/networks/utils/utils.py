@@ -1,8 +1,12 @@
+import torch.distributed as dist
+import torch.multiprocessing as mp
+import datetime as dt
 from torch.utils.data import Dataset, DataLoader
-from torch.nn import MarginRankingLoss, DataParallel
+from torch.nn import MarginRankingLoss
+from torch.nn.parallel import DistributedDataParallel
 from torch.nn.parallel._functions import Scatter
 import torch
-import os, json, itertools
+import os, json, itertools, sys, tempfile
 import numpy as np
 
 class GraphDataset(Dataset):
@@ -15,7 +19,7 @@ class GraphDataset(Dataset):
         return len(self.labels)
     
     def __getitem__(self, idx):
-        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npz")
+        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npy")
         backwards_edge_dict = json.load(open(os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+"backwardsEdge.json")))
         pop = []
         for key in backwards_edge_dict:
@@ -28,7 +32,7 @@ class GraphDataset(Dataset):
         # problemType = torch.tensor([float(self.labels[idx][0].split("|||")[1])])
         
         data = np.load(path)
-        tokens = torch.from_numpy(data['node_rep']).float()
+        tokens = torch.from_numpy(data).float()
 
         return (tokens, backwards_edge_dict), label
 
@@ -60,7 +64,7 @@ def scatter_kwargs(inputs, kwargs, target_gpus, dim=0):
     kwargs = tuple(kwargs)
     return inputs, kwargs
 
-class ListDataParallel(DataParallel):
+class ListDistributedDataParallel(DistributedDataParallel):
     def scatter(self, inputs, kwargs, device_ids):
         return scatter_kwargs(inputs, kwargs, device_ids, dim=self.dim)
 
@@ -77,3 +81,20 @@ def modified_margin_rank_loss_cuda(scoresBatch, labelsBatch, lossTensor):
         trueComparison = torch.where(labelsBatch[:,i]>labelsBatch[:,j], torch.tensor(1).cuda(), torch.tensor(-1).cuda()).cuda()
         lossTensor += abs(i-j)*loss_fn(scoresBatch[:,i], scoresBatch[:,j], trueComparison)
     return lossTensor
+
+
+def setup(rank, world_size):
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
+
+    # initialize the process group
+    dist.init_process_group("nccl", rank=rank, world_size=world_size, timeout=dt.timedelta(seconds=300))
+
+def cleanup():
+    dist.destroy_process_group()
+
+def run_train(demo_fn, world_size, time_steps, numEdgeSets, trainset, valset, epochs):
+    mp.spawn(demo_fn,
+             args=(world_size, time_steps, numEdgeSets,trainset, valset, epochs,),
+             nprocs=world_size,
+             join=True)
