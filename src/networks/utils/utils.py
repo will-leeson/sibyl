@@ -92,9 +92,3 @@ def setup(rank, world_size):
 
 def cleanup():
     dist.destroy_process_group()
-
-def run_train(demo_fn, world_size, time_steps, numEdgeSets, trainset, valset, epochs):
-    mp.spawn(demo_fn,
-             args=(world_size, time_steps, numEdgeSets,trainset, valset, epochs,),
-             nprocs=world_size,
-             join=True)

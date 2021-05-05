@@ -5,21 +5,21 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 
-def train(rank, world_size, time_steps, numEdgeSets, train_set, val_set, epochs):
-	setup(rank, world_size)
+# def train(rank, world_size, time_steps, numEdgeSets, train_set, val_set, epochs):
+# 	setup(rank, world_size)
 
-	model = GGNN(passes=time_steps, numEdgeSets=numEdgeSets).cuda()
-	ddp_model = ListDistributedDataParallel(model, device_ids=[rank], find_unused_parameters=True)
+# 	model = GGNN(passes=time_steps, numEdgeSets=numEdgeSets).cuda()
+# 	ddp_model = ListDistributedDataParallel(model, device_ids=[rank], find_unused_parameters=True)
 
-	loss_fn = modified_margin_rank_loss_cuda
-	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
-	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=2, verbose=True)
+# 	loss_fn = modified_margin_rank_loss_cuda
+# 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
+# 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=2, verbose=True)
 
-	report = train_model(model=ddp_model, loss_fn = loss_fn, batchSize=8, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=epochs)
-	train_acc, train_loss, val_acc, val_loss, val_best, val_correct  = report
-	np.savez_compressed(str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss)
+# 	report = train_model(model=ddp_model, loss_fn = loss_fn, batchSize=8, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=epochs)
+# 	train_acc, train_loss, val_acc, val_loss, val_best, val_correct  = report
+# 	np.savez_compressed(str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss)
 
-	cleanup()
+# 	cleanup()
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="GGNN Trainer")
@@ -27,8 +27,10 @@ if __name__ == '__main__':
 	parser.add_argument("-e", "--epochs", help="Number of training epochs (Default=20)", default=20, type=int)
 	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "CFG"], choices=['AST', 'DFG', "CFG"])
 	parser.add_argument("-p", "--problem-types", help="Which problem types to consider:termination, overflow, reachSafety, memSafety (Default=All)", nargs="+", default=['termination', 'overflow', 'reachSafety', 'memSafety'], choices=['termination', 'overflow', 'reachSafety', 'memSafety'])
+	parser.add_argument('--local_rank', type=int, default=-1, metavar='N', help='Local process rank.')  # you need this argument in your scripts for DDP to work
 
 	args = parser.parse_args()
+	rank = args.local_rank
 
 	trainFiles = json.load(open("../../data/trainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
@@ -57,4 +59,17 @@ if __name__ == '__main__':
 	train_set = GraphDataset(trainLabels, "../../data/final_graphs/", args.edge_sets)
 	val_set = GraphDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
 
-	run_train(train, torch.cuda.device_count(), args.time_steps, len(args.edge_sets), train_set, val_set, args.epochs)
+	setup(rank, torch.cuda.device_count())
+
+	model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).cuda()
+	ddp_model = ListDistributedDataParallel(model, device_ids=[rank])
+
+	loss_fn = modified_margin_rank_loss_cuda
+	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
+	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=2, verbose=True)
+
+	report = train_model(model=ddp_model, loss_fn = loss_fn, batchSize=8, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
+	train_acc, train_loss, val_acc, val_loss, val_best, val_correct  = report
+	np.savez_compressed(str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss)
+
+	cleanup()
