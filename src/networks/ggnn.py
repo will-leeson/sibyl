@@ -2,6 +2,8 @@ import torch, copy, tqdm, time, copy, subprocess
 import torch.nn as nn
 import torch.nn.functional as f
 import gc, cProfile
+import torch.distributed as dist
+from torch.utils.data.distributed import DistributedSampler
 from scipy.stats import spearmanr
 
 class GGNN(nn.Module):
@@ -54,6 +56,7 @@ class GGNN(nn.Module):
         for i in range(len(nodesBatch)):
             nodesBatch[i] = nodesBatch[i].to(device)
 
+
         for _ in range(self.passes):
             inputsList = []
             for i in range(len(nodesBatch)):
@@ -91,8 +94,11 @@ def my_collate(batch):
     return (((tokens), backwards_edge_dict), labels)
 
 def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
-    train_loader = torch.utils.data.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True, collate_fn=my_collate)
-    val_loader = torch.utils.data.DataLoader(dataset=valset, batch_size=batchSize, shuffle=True, collate_fn=my_collate)
+    train_sampler = DistributedSampler(trainset)
+    val_sampler = DistributedSampler(valset) 
+
+    train_loader = torch.utils.data.DataLoader(dataset=trainset, sampler=train_sampler, batch_size=batchSize, collate_fn=my_collate)
+    val_loader = torch.utils.data.DataLoader(dataset=valset, sampler=val_sampler, batch_size=batchSize, collate_fn=my_collate)
 
     train_accuracies = []; val_accuracies = []
     train_losses = []; val_losses = []
@@ -106,6 +112,8 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         aCorrectPossible = 0
 
         model.train()
+        
+        dist.barrier()
         for (i, ((tokenSets, backwards_edge_dicts), labels)) in enumerate(tqdm.tqdm(train_loader)):
             lossTensor = torch.FloatTensor([0]).cuda()
             for item in range(len(tokenSets)):
@@ -130,8 +138,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
-            if i+1%100==0 or (i+1)==len(train_loader):
+            if (i+1)%10==0 or (i+1)==len(train_loader):
                 mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/((i+1)*batchSize),4))+ ", Best Correct%:" +  str(round(bestCorrect/((i*batchSize)+len(tokenSets)),4)) + ", A correct%:" +  str(round(aCorrect/aCorrectPossible, 4))
                 print(mystr)
             train_accuracies.append(round(corr_sum/((i+1)*batchSize),4))

@@ -1,25 +1,10 @@
 from ggnn import GGNN, train_model
-from utils.utils import GraphDataset, modified_margin_rank_loss_cuda, ListDistributedDataParallel, setup, cleanup, run_train
+from utils.utils import GraphDataset, modified_margin_rank_loss_cuda, ListDistributedDataParallel, setup, cleanup
 import torch, json, os, tqdm, sys, datetime, argparse
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-
-# def train(rank, world_size, time_steps, numEdgeSets, train_set, val_set, epochs):
-# 	setup(rank, world_size)
-
-# 	model = GGNN(passes=time_steps, numEdgeSets=numEdgeSets).cuda()
-# 	ddp_model = ListDistributedDataParallel(model, device_ids=[rank], find_unused_parameters=True)
-
-# 	loss_fn = modified_margin_rank_loss_cuda
-# 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
-# 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=2, verbose=True)
-
-# 	report = train_model(model=ddp_model, loss_fn = loss_fn, batchSize=8, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=epochs)
-# 	train_acc, train_loss, val_acc, val_loss, val_best, val_correct  = report
-# 	np.savez_compressed(str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss)
-
-# 	cleanup()
+import torch.distributed as dist
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="GGNN Trainer")
@@ -58,9 +43,7 @@ if __name__ == '__main__':
 
 	train_set = GraphDataset(trainLabels, "../../data/final_graphs/", args.edge_sets)
 	val_set = GraphDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
-
-	setup(rank, torch.cuda.device_count())
-
+	dist.init_process_group(backend='gloo', init_method='env://')
 	model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).cuda()
 	ddp_model = ListDistributedDataParallel(model, device_ids=[rank])
 
@@ -68,7 +51,7 @@ if __name__ == '__main__':
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=2, verbose=True)
 
-	report = train_model(model=ddp_model, loss_fn = loss_fn, batchSize=8, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
+	report = train_model(model=ddp_model, loss_fn = loss_fn, batchSize=20, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
 	train_acc, train_loss, val_acc, val_loss, val_best, val_correct  = report
 	np.savez_compressed(str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss)
 
