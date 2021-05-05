@@ -16,10 +16,10 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 	rank = args.local_rank
+	torch.cuda.set_device(rank)
 
 	trainFiles = json.load(open("../../data/trainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
-	print(args.problem_types)
 	if "overflow" not in args.problem_types:
 		trainLabels = [item for item in trainLabels if item[0].split("|||")[1]!="0"]
 	if "reachSafety" not in args.problem_types:
@@ -43,16 +43,15 @@ if __name__ == '__main__':
 
 	train_set = GraphDataset(trainLabels, "../../data/final_graphs/", args.edge_sets)
 	val_set = GraphDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
-	dist.init_process_group(backend='gloo', init_method='env://')
-	model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).cuda()
-	ddp_model = ListDistributedDataParallel(model, device_ids=[rank])
+	dist.init_process_group(backend='nccl', init_method='env://')
+	model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).to(torch.cuda.current_device())
+	ddp_model = ListDistributedDataParallel(model, device_ids=[rank],find_unused_parameters=True)
 
 	loss_fn = modified_margin_rank_loss_cuda
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=2, verbose=True)
-
-	report = train_model(model=ddp_model, loss_fn = loss_fn, batchSize=20, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
-	train_acc, train_loss, val_acc, val_loss, val_best, val_correct  = report
+	report = train_model(model=ddp_model, loss_fn = loss_fn, batchSize=25, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
+	train_acc, train_loss, val_acc, val_loss = report
 	np.savez_compressed(str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss)
 
 	cleanup()

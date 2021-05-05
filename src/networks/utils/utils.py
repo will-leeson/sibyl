@@ -19,7 +19,7 @@ class GraphDataset(Dataset):
         return len(self.labels)
     
     def __getitem__(self, idx):
-        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npy")
+        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npz")
         backwards_edge_dict = json.load(open(os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+"backwardsEdge.json")))
         pop = []
         for key in backwards_edge_dict:
@@ -32,7 +32,7 @@ class GraphDataset(Dataset):
         # problemType = torch.tensor([float(self.labels[idx][0].split("|||")[1])])
         
         data = np.load(path)
-        tokens = torch.from_numpy(data).float()
+        tokens = torch.from_numpy(data['node_rep']).float()
 
         return (tokens, backwards_edge_dict), label
 

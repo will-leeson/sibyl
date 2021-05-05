@@ -4,6 +4,7 @@ import torch.nn.functional as f
 import gc, cProfile
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
+from torch.distributed import ReduceOp
 from scipy.stats import spearmanr
 
 class GGNN(nn.Module):
@@ -128,21 +129,25 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum+=corr
                 assert(corr <=1)
-            bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
+            #bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
             
-            for j in range(len(scores)):
-                if (labels[j]>0).sum():
-                    aCorrect += (labels[j][scores[j].argmax()]>0).item()
-                    aCorrectPossible+=1
+            #for j in range(len(scores)):
+            #    if (labels[j]>0).sum():
+            #        aCorrect += (labels[j][scores[j].argmax()]>0).item()
+            #        aCorrectPossible+=1
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if (i+1)%10==0 or (i+1)==len(train_loader):
-                mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/((i+1)*batchSize),4))+ ", Best Correct%:" +  str(round(bestCorrect/((i*batchSize)+len(tokenSets)),4)) + ", A correct%:" +  str(round(aCorrect/aCorrectPossible, 4))
+            if (i+1)%25==0 or (i+1)==len(train_loader):
+                cumLossTensor = torch.cuda.FloatTensor([cum_loss])
+                dist.all_reduce_multigpu(cumLossTensor, op=ReduceOp.SUM)
+                corrTensor = torch.cuda.FloatTensor([corr_sum/((i+1)*batchSize)])
+                dist.all_reduce_multigpu(corrTensor, op=ReduceOp.SUM)
+                mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cumLossTensor.item()/(i+1), 4)) + ", Avg-Corr:" +  str(round(corrTensor.item()/4,4))
                 print(mystr)
-            train_accuracies.append(round(corr_sum/((i+1)*batchSize),4))
-            train_losses.append(round(cum_loss/(i+1),4))
+                train_accuracies.append(round(corr_sum/((i+1)*batchSize),4))
+                train_losses.append(round(cum_loss/(i+1),4))
             del lossTensor
 
         corr_sum = 0.0
@@ -159,25 +164,28 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             scores = model(tokenSets, backwards_edge_dicts)
             lossTensor = torch.FloatTensor([0]).cuda()
             cum_loss+=loss_fn(scores, labels, lossTensor).cpu().detach().item()
-            bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
-            for j in range(len(scores)):
-                if (labels[j]>0).sum():
-                    aCorrect += (labels[j][scores[j].argmax()]>0).item()
-                    aCorrectPossible+=1
+            #bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
+            #for j in range(len(scores)):
+            #    if (labels[j]>0).sum():
+            #        aCorrect += (labels[j][scores[j].argmax()]>0).item()
+            #        aCorrectPossible+=1
 
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum += corr
-        scheduler.step(cum_loss/(i+1))
         del lossTensor
-        val_accuracies.append(corr_sum/len(valset))
-        val_best.append(bestCorrect/(len(valset)))
-        val_correct.append(aCorrect/aCorrectPossible)
-        val_losses.append(cum_loss/(i+1))
 
-        mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(valset)),4)) + ", Best Correct%:" + str(round(bestCorrect/(len(valset)),4)) + ", A correct%:" +str(round(aCorrect/aCorrectPossible))
+        cumLossTensor = torch.cuda.FloatTensor([cum_loss])
+        dist.all_reduce_multigpu(cumLossTensor, op=ReduceOp.SUM)
+        corrTensor = torch.cuda.FloatTensor([corr_sum/((i+1)*batchSize)])
+        dist.all_reduce_multigpu(corrTensor, op=ReduceOp.SUM)
+        scheduler.step(cumLossTensor.item())
+        val_accuracies.append(corrTensor.item())
+        val_losses.append(cumLossTensor.item())
+
+        mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cumLossTensor.item(),4)) + ", Avg-Corr:" +  str(round(corrTensor.item()/len(valset)*4,4))
         print(mystr)
         if optimizer.param_groups[0]['lr']<1e-7:
             break
     
-    return train_accuracies, train_losses, val_accuracies, val_losses, val_best, val_correct
+    return train_accuracies, train_losses, val_accuracies, val_losses
