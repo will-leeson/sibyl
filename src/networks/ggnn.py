@@ -27,17 +27,9 @@ class GGNN(nn.Module):
         for node_spot in range(len(nodes)):
             counter = 0
             for edgeSet in edges:
-                collector = []
                 if str(node_spot) in edges[edgeSet]:
                     for edges1 in edges[edgeSet][str(node_spot)]:
-                        collector.append(repDict[edges1])
-
-                if collector:
-                    collector = torch.stack(collector)
-                    # collector = self.edgeNets[counter](collector)
-                    # collector = f.relu(collector)
-                    collector = collector.sum(dim=0)
-                    incoming[node_spot]+=collector
+                        incoming[node_spot]+=repDict[edges1]
 
                 counter+=1
         return incoming     
@@ -103,15 +95,10 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
 
     train_accuracies = []; val_accuracies = []
     train_losses = []; val_losses = []
-    val_best = []; val_correct = []
 
     for epoch in range(0, num_epochs):
         corr_sum = 0.0
         cum_loss = 0.0
-        bestCorrect = 0
-        aCorrect = 0
-        aCorrectPossible = 0
-
         model.train()
         
         dist.barrier()
@@ -120,7 +107,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             for item in range(len(tokenSets)):
                 tokenSets[item] = tokenSets[item].cuda()
             labels = labels.cuda()
-
+            
             scores = model(tokenSets, backwards_edge_dicts)
             loss = loss_fn(scores, labels, lossTensor)
             cum_loss+=loss.cpu().detach().item()
@@ -152,9 +139,6 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
 
         corr_sum = 0.0
         cum_loss = 0.0
-        bestCorrect = 0
-        aCorrect = 0
-        aCorrectPossible = 0
         model.eval()
 
         for (i, ((tokenSets, backwards_edge_dicts), labels)) in enumerate((val_loader)):
