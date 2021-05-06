@@ -5,6 +5,7 @@ import gc, cProfile
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.distributed import ReduceOp
+from torch.cuda.amp import autocast
 from scipy.stats import spearmanr
 
 class GGNN(nn.Module):
@@ -12,9 +13,9 @@ class GGNN(nn.Module):
         super(GGNN, self).__init__()
         self.passes = passes
         self.gru = nn.GRUCell(150, 150)
-        # self.edgeNets = []
-        # for i in range(numEdgeSets):
-        #     self.edgeNets.append(nn.Linear(150,150).cuda())
+        self.edgeNets = []
+        for i in range(numEdgeSets):
+            self.edgeNets.append([nn.Linear(150,150).cuda(),nn.Linear(150,150).cuda()])
         self.fc1 = nn.Linear(151, 80)
         self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
@@ -33,12 +34,16 @@ class GGNN(nn.Module):
         for _ in range(self.passes):
             for i in range(len(nodesBatch)):
                 incoming = torch.zeros_like(nodesBatch[i])
+                counter = 0
                 for edgeSet in backwards_edgeBatch[i]:
                     try:
-                        incoming = incoming.index_add(0, edgeSet[:,0], nodesBatch[i][edgeSet[:,1]])
+                        y = self.edgeNets[counter][0](nodesBatch[i][edgeSet[:,1]])
+                        y = f.leaky_relu(y)
+                        y = self.edgeNets[counter][1](nodesBatch[i][edgeSet[:,1]])
+                        incoming = incoming.index_add(0, edgeSet[:,0], y)
                     except:
                         continue #Empty Edge Set
-                torch.set_printoptions(profile="full")
+                    counter+=1
                 nodesBatch[i] = self.gru(incoming, nodesBatch[i])
 
         for i in range(len(nodesBatch)):
@@ -51,7 +56,7 @@ class GGNN(nn.Module):
         x = self.fc1(x)
         x = f.leaky_relu(x)
         x = self.fc2(x)
-        x = f.leaky_relu(x) 
+        x = f.leaky_relu(x)
         x = self.fcLast(x)
         return x
 
@@ -82,6 +87,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         corr_sum = 0.0
         cum_loss = 0.0
         model.train()
+        torch.enable_grad()
         
         dist.barrier()
         for (i, ((tokenSets, backwards_edge, problemTypes), labels)) in enumerate(tqdm.tqdm(train_loader)):
@@ -90,8 +96,9 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                 tokenSets[item] = tokenSets[item].cuda()
             problemTypes.cuda()
             labels = labels.cuda()
-            scores = model(tokenSets, backwards_edge, problemTypes)
-            loss = loss_fn(scores, labels, lossTensor)
+            with autocast():
+                scores = model(tokenSets, backwards_edge, problemTypes)
+                loss = loss_fn(scores, labels, lossTensor)
             cum_loss+=loss.cpu().detach().item()
 
             for j in range(len(labels)):
@@ -107,6 +114,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
 
             optimizer.zero_grad()
             loss.backward()
+            model.float()
             optimizer.step()
             if (i+1)%25==0 or (i+1)==len(train_loader):
 #                cumLossTensor = torch.cuda.FloatTensor([cum_loss])
@@ -128,9 +136,12 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                 tokenSets[item] = tokenSets[item].cuda()
             problemTypes.cuda()
             labels = labels.cuda()
-            scores = model(tokenSets, backwards_edge_dicts, problemTypes)
             lossTensor = torch.FloatTensor([0]).cuda()
-            cum_loss+=loss_fn(scores, labels, lossTensor).cpu().detach().item()
+            with autocast():
+                with torch.no_grad():
+                    scores = model(tokenSets, backwards_edge_dicts, problemTypes)
+                    loss =loss_fn(scores, labels, lossTensor)
+                    cum_loss+=loss.cpu().detach().item()
             #bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
             #for j in range(len(scores)):
             #    if (labels[j]>0).sum():
@@ -142,13 +153,15 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                 corr_sum += corr
         del lossTensor
 
-#        cumLossTensor = torch.cuda.FloatTensor([cum_loss])
-#        dist.all_reduce_multigpu(cumLossTensor, op=ReduceOp.SUM)
+        cumLossTensor = torch.cuda.FloatTensor([cum_loss])
+        dist.all_reduce_multigpu(cumLossTensor, op=ReduceOp.SUM)
 #        corrTensor = torch.cuda.FloatTensor([corr_sum/((i+1)*batchSize)])
 #        dist.all_reduce_multigpu(corrTensor, op=ReduceOp.SUM)
-#        scheduler.step(cumLossTensor.item())
+        scheduler.step(cumLossTensor.item())
         val_accuracies.append(corr_sum/(len(val_loader)*batchSize))
         val_losses.append(cum_loss/(i+1))
+
+        print(cumLossTensor.item()/(dist.get_world_size()*(i+1)))
 
         mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(val_loader)*batchSize),4))
         print(mystr)
