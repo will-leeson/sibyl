@@ -18,24 +18,8 @@ class GGNN(nn.Module):
         self.fc1 = nn.Linear(150, 80)
         self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
-    
-    def collect_incoming(self, nodes, edges):
-        repDict = dict(list(zip(list(range(len(nodes))),nodes)))
-        assert(len(repDict) == len(nodes))
 
-        incoming = torch.zeros(len(nodes), 150).cuda()
-        for node_spot in range(len(nodes)):
-            counter = 0
-            for edgeSet in edges:
-                if str(node_spot) in edges[edgeSet]:
-                    for edges1 in edges[edgeSet][str(node_spot)]:
-                        incoming[node_spot]+=repDict[edges1]
-
-                counter+=1
-        return incoming     
-
-
-    def forward(self, nodesBatch, backwards_edge_dictBatch):
+    def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):
         """
         backwards_edge_dictBatch: A batch of dicts. Each key in the dict is a node, the value for each key is the nodes inset
         The forward function of the neural net. For each pass, perform the GGNN step: for each graph G, for each node N
@@ -45,21 +29,17 @@ class GGNN(nn.Module):
         Pass the graph feature vectors through two linear layers with a tanh activation function in between and return
         the scores
         """
-        device = torch.cuda.current_device()
-        for i in range(len(nodesBatch)):
-            nodesBatch[i] = nodesBatch[i].to(device)
-
 
         for _ in range(self.passes):
-            inputsList = []
             for i in range(len(nodesBatch)):
-                inputs = self.collect_incoming(nodesBatch[i], backwards_edge_dictBatch[i])
-                inputsList.append(inputs)
-
-            for i in range(len(nodesBatch)):
-                nodesBatch[i] = self.gru(inputsList[i], nodesBatch[i])
-                #torch.cuda.empty_cache()
-            del inputsList
+                incoming = torch.zeros_like(nodesBatch[i])
+                for edgeSet in backwards_edgeBatch[i]:
+                    try:
+                        incoming = incoming.index_add(0, edgeSet[:,0], nodesBatch[i][edgeSet[:,1]])
+                    except:
+                        continue #Empty Edge Set
+                torch.set_printoptions(profile="full")
+                nodesBatch[i] = self.gru(incoming, nodesBatch[i])
 
         for i in range(len(nodesBatch)):
                 nodesBatch[i] = nodesBatch[i].sum(dim=0)
@@ -80,11 +60,12 @@ def my_collate(batch):
     This is my collate function. There are many like it, but this one is mine
     """
     tokens = [item[0][0] for item in batch]
-    backwards_edge_dict = [item[0][1] for item in batch]
+    backwards_edges = [item[0][1] for item in batch]
+    problemType = torch.stack([item[0][2] for item in batch])
     labels = [torch.tensor(item[1]) for item in batch]
     labels = torch.stack(labels)
 
-    return (((tokens), backwards_edge_dict), labels)
+    return (((tokens), backwards_edges, problemType), labels)
 
 def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
     train_sampler = DistributedSampler(trainset)
@@ -102,13 +83,13 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         model.train()
         
         dist.barrier()
-        for (i, ((tokenSets, backwards_edge_dicts), labels)) in enumerate(tqdm.tqdm(train_loader)):
+        for (i, ((tokenSets, backwards_edge, problemTypes), labels)) in enumerate(tqdm.tqdm(train_loader)):
             lossTensor = torch.FloatTensor([0]).cuda()
             for item in range(len(tokenSets)):
                 tokenSets[item] = tokenSets[item].cuda()
+            problemTypes.cuda()
             labels = labels.cuda()
-            
-            scores = model(tokenSets, backwards_edge_dicts)
+            scores = model(tokenSets, backwards_edge, problemTypes)
             loss = loss_fn(scores, labels, lossTensor)
             cum_loss+=loss.cpu().detach().item()
 

@@ -6,7 +6,7 @@ from torch.nn import MarginRankingLoss
 from torch.nn.parallel import DistributedDataParallel
 from torch.nn.parallel._functions import Scatter
 import torch
-import os, json, itertools, sys, tempfile
+import os, itertools, sys, tempfile
 import numpy as np
 
 class GraphDataset(Dataset):
@@ -19,54 +19,50 @@ class GraphDataset(Dataset):
         return len(self.labels)
     
     def __getitem__(self, idx):
-        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npz")
-        backwards_edge_dict = json.load(open(os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+"backwardsEdge.json")))
-        pop = []
-        for key in backwards_edge_dict:
-            if key not in self.edge_sets:
-                pop.append(key)
-        for key in pop:
-            backwards_edge_dict.pop(key)
+        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npy")
+        backwards_edges = np.load(os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+"Edges.npz"))
+
+        edges_tensor = [torch.from_numpy(backwards_edges[edgeSet]) for edgeSet in self.edge_sets]
         
         label = self.labels[idx][1]
-        # problemType = torch.tensor([float(self.labels[idx][0].split("|||")[1])])
+        problemType = torch.tensor([float(self.labels[idx][0].split("|||")[1])])
         
         data = np.load(path)
-        tokens = torch.from_numpy(data['node_rep']).float()
+        tokens = torch.from_numpy(data).float()
 
-        return (tokens, backwards_edge_dict), label
+        return (tokens, edges_tensor, problemType), label
 
-def scatter(inputs, target_gpus, dim=0):
-    def scatter_map(obj):
-        if isinstance(obj, torch.Tensor):
-            return Scatter.apply(target_gpus, None, dim, obj)
-        if isinstance(obj, tuple) and len(obj) > 0:
-            return list(zip(*map(scatter_map, obj)))
-        if isinstance(obj, list) and len(obj) > 0:
-            size = len(obj) // len(target_gpus) + 1
-            return [obj[i * size:(i + 1) * size] for i in range(len(target_gpus))]
-        if isinstance(obj, dict) and len(obj) > 0:
-            return list(map(type(obj), zip(*map(scatter_map, obj.items()))))
-        return [obj for targets in target_gpus]
-    try:
-        return scatter_map(inputs)
-    finally:
-        scatter_map = None
+# def scatter(inputs, target_gpus, dim=0):
+#     def scatter_map(obj):
+#         if isinstance(obj, torch.Tensor):
+#             return Scatter.apply(target_gpus, None, dim, obj)
+#         if isinstance(obj, tuple) and len(obj) > 0:
+#             return list(zip(*map(scatter_map, obj)))
+#         if isinstance(obj, list) and len(obj) > 0:
+#             size = len(obj) // len(target_gpus) + 1
+#             return [obj[i * size:(i + 1) * size] for i in range(len(target_gpus))]
+#         if isinstance(obj, dict) and len(obj) > 0:
+#             return list(map(type(obj), zip(*map(scatter_map, obj.items()))))
+#         return [obj for targets in target_gpus]
+#     try:
+#         return scatter_map(inputs)
+#     finally:
+#         scatter_map = None
 
-def scatter_kwargs(inputs, kwargs, target_gpus, dim=0):
-    inputs = scatter(inputs, target_gpus, dim) if inputs else []
-    kwargs = scatter(kwargs, target_gpus, dim) if kwargs else []
-    if len(inputs) < len(kwargs):
-        inputs.extend([() for _ in range(len(kwargs) - len(inputs))])
-    elif len(kwargs) < len(inputs):
-        kwargs.extend([{} for _ in range(len(inputs) - len(kwargs))])
-    inputs = tuple(inputs)
-    kwargs = tuple(kwargs)
-    return inputs, kwargs
+# def scatter_kwargs(inputs, kwargs, target_gpus, dim=0):
+#     inputs = scatter(inputs, target_gpus, dim) if inputs else []
+#     kwargs = scatter(kwargs, target_gpus, dim) if kwargs else []
+#     if len(inputs) < len(kwargs):
+#         inputs.extend([() for _ in range(len(kwargs) - len(inputs))])
+#     elif len(kwargs) < len(inputs):
+#         kwargs.extend([{} for _ in range(len(inputs) - len(kwargs))])
+#     inputs = tuple(inputs)
+#     kwargs = tuple(kwargs)
+#     return inputs, kwargs
 
-class ListDistributedDataParallel(DistributedDataParallel):
-    def scatter(self, inputs, kwargs, device_ids):
-        return scatter_kwargs(inputs, kwargs, device_ids, dim=self.dim)
+# class ListDistributedDataParallel(DistributedDataParallel):
+#     def scatter(self, inputs, kwargs, device_ids):
+#         return scatter_kwargs(inputs, kwargs, device_ids, dim=self.dim)
 
 def modified_margin_rank_loss(scoresBatch, labelsBatch, lossTensor):
     loss_fn = MarginRankingLoss(margin=0.1)
