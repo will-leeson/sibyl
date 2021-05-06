@@ -45,12 +45,20 @@ if __name__ == '__main__':
 	val_set = GraphDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
 	dist.init_process_group(backend='nccl', init_method='env://')
 	model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).to(torch.cuda.current_device())
+<<<<<<< HEAD
 	ddp_model = nn.parallel.DistributedDataParallel(model, device_ids=[rank])
+=======
+	ddp_model = ListDistributedDataParallel(model, device_ids=[rank])
+>>>>>>> c807f814895ff870bcd41e4f6769d87d17fd0104
 
 	loss_fn = modified_margin_rank_loss_cuda
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=2, verbose=True)
+<<<<<<< HEAD
 	report = train_model(model=ddp_model, loss_fn = loss_fn, batchSize=5, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
+=======
+	report = train_model(model=ddp_model, loss_fn = loss_fn, batchSize=2, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
+>>>>>>> c807f814895ff870bcd41e4f6769d87d17fd0104
 	train_acc, train_loss, val_acc, val_loss = report
 	np.savez_compressed(str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss)
 
