@@ -15,7 +15,7 @@ class GGNN(nn.Module):
         # self.edgeNets = []
         # for i in range(numEdgeSets):
         #     self.edgeNets.append(nn.Linear(150,150).cuda())
-        self.fc1 = nn.Linear(150, 80)
+        self.fc1 = nn.Linear(151, 80)
         self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
 
@@ -47,6 +47,7 @@ class GGNN(nn.Module):
                 nodesBatch[i][torch.isnan(nodesBatch[i])] = 0
                 nodesBatch[i] = f.relu(nodesBatch[i])
         x = torch.stack(nodesBatch)
+        x = torch.cat((x, problemTypeBatch), dim=1)
         x = self.fc1(x)
         x = f.leaky_relu(x)
         x = self.fc2(x)
@@ -122,11 +123,12 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         cum_loss = 0.0
         model.eval()
 
-        for (i, ((tokenSets, backwards_edge_dicts), labels)) in enumerate((val_loader)):
+        for (i, ((tokenSets, backwards_edge_dicts, problemTypes), labels)) in enumerate((val_loader)):
             for item in range(len(tokenSets)):
                 tokenSets[item] = tokenSets[item].cuda()
+            problemTypes.cuda()
             labels = labels.cuda()
-            scores = model(tokenSets, backwards_edge_dicts)
+            scores = model(tokenSets, backwards_edge_dicts, problemTypes)
             lossTensor = torch.FloatTensor([0]).cuda()
             cum_loss+=loss_fn(scores, labels, lossTensor).cpu().detach().item()
             #bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
@@ -148,7 +150,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         val_accuracies.append(corr_sum/(len(val_loader)*batchSize))
         val_losses.append(cum_loss/(i+1))
 
-        mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cumLossTensor.item()/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(val_loader)*batchSize),4))
+        mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(val_loader)*batchSize),4))
         print(mystr)
         if optimizer.param_groups[0]['lr']<1e-7:
             break
