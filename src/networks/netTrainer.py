@@ -1,5 +1,5 @@
 from ggnn import GGNN, train_model
-from utils.utils import GraphDataset, modified_margin_rank_loss_cuda, setup, cleanup
+from utils.utils import GraphDataset, modified_margin_rank_loss_cuda, ListDataParallel
 import torch, json, os, tqdm, sys, datetime, argparse
 import torch.nn as nn
 import torch.optim as optim
@@ -15,8 +15,6 @@ if __name__ == '__main__':
 	parser.add_argument('--local_rank', type=int, default=-1, metavar='N', help='Local process rank.')  # you need this argument in your scripts for DDP to work
 
 	args = parser.parse_args()
-	rank = args.local_rank
-	torch.cuda.set_device(rank)
 
 	trainFiles = json.load(open("../../data/trainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
@@ -43,15 +41,12 @@ if __name__ == '__main__':
 
 	train_set = GraphDataset(trainLabels, "../../data/final_graphs/", args.edge_sets)
 	val_set = GraphDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
-	dist.init_process_group(backend='nccl', init_method='env://')
 	model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).to(device=torch.cuda.current_device())
-	ddp_model = nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank)
+	model = ListDataParallel(model)
 
 	loss_fn = modified_margin_rank_loss_cuda
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=2, verbose=True)
-	report = train_model(model=ddp_model, loss_fn = loss_fn, batchSize=20, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
+	report = train_model(model=model, loss_fn = loss_fn, batchSize=20, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
 	train_acc, train_loss, val_acc, val_loss = report
 	np.savez_compressed(str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss)
-
-	cleanup()

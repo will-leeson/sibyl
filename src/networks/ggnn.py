@@ -30,6 +30,9 @@ class GGNN(nn.Module):
         Pass the graph feature vectors through two linear layers with a tanh activation function in between and return
         the scores
         """
+        for i in range(len(nodesBatch)):
+            nodesBatch[i] = nodesBatch[i].to(torch.cuda.current_device())
+            problemTypeBatch[i] = problemTypeBatch[i].to(torch.cuda.current_device())
 
         for _ in range(self.passes):
             for i in range(len(nodesBatch)):
@@ -74,11 +77,8 @@ def my_collate(batch):
     return (((tokens), backwards_edges, problemType), labels)
 
 def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
-    train_sampler = DistributedSampler(trainset)
-    val_sampler = DistributedSampler(valset) 
-
-    train_loader = torch.utils.data.DataLoader(dataset=trainset, sampler=train_sampler, batch_size=batchSize, collate_fn=my_collate)
-    val_loader = torch.utils.data.DataLoader(dataset=valset, sampler=val_sampler, batch_size=batchSize, collate_fn=my_collate)
+    train_loader = torch.utils.data.DataLoader(dataset=trainset, shuffle=True, batch_size=batchSize, collate_fn=my_collate)
+    val_loader = torch.utils.data.DataLoader(dataset=valset, shuffle=True, batch_size=batchSize, collate_fn=my_collate)
 
     train_accuracies = []; val_accuracies = []
     train_losses = []; val_losses = []
@@ -88,8 +88,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         cum_loss = 0.0
         model.train()
         torch.enable_grad()
-        
-        dist.barrier()
+
         for (i, ((tokenSets, backwards_edge, problemTypes), labels)) in enumerate(tqdm.tqdm(train_loader)):
             lossTensor = torch.FloatTensor([0]).cuda()
             for item in range(len(tokenSets)):
