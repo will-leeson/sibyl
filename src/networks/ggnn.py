@@ -116,10 +116,6 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             model.float()
             optimizer.step()
             if (i+1)%25==0 or (i+1)==len(train_loader):
-#                cumLossTensor = torch.cuda.FloatTensor([cum_loss])
-#                dist.all_reduce_multigpu(cumLossTensor, op=ReduceOp.SUM)
-#                corrTensor = torch.cuda.FloatTensor([corr_sum/((i+1)*batchSize)])
-#                dist.all_reduce_multigpu(corrTensor, op=ReduceOp.SUM)
                 mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i+1), 4)) + ", Avg-Corr:" +  str(round(corr_sum/((i+1)*batchSize),4))
                 print(mystr)
                 train_accuracies.append(round(corr_sum/((i+1)*batchSize),4))
@@ -152,17 +148,11 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                 corr_sum += corr
         del lossTensor
 
-        cumLossTensor = torch.cuda.FloatTensor([cum_loss])
-        dist.all_reduce_multigpu(cumLossTensor, op=ReduceOp.SUM)
-#        corrTensor = torch.cuda.FloatTensor([corr_sum/((i+1)*batchSize)])
-#        dist.all_reduce_multigpu(corrTensor, op=ReduceOp.SUM)
         scheduler.step(cumLossTensor.item())
         val_accuracies.append(corr_sum/(len(val_loader)*batchSize))
         val_losses.append(cum_loss/(i+1))
 
-        print(cumLossTensor.item()/(dist.get_world_size()*(i+1)))
-
-        mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(val_loader)*batchSize),4))
+        mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(val_loader)),4))
         print(mystr)
         if optimizer.param_groups[0]['lr']<1e-7:
             break

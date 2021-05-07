@@ -18,7 +18,7 @@ class GraphDataset(Dataset):
         return len(self.labels)
     
     def __getitem__(self, idx):
-        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npy")
+        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npz")
         backwards_edges = np.load(os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+"Edges.npz"))
 
         edges_tensor = [torch.from_numpy(backwards_edges[edgeSet]) for edgeSet in self.edge_sets]
@@ -27,7 +27,7 @@ class GraphDataset(Dataset):
         problemType = torch.tensor([float(self.labels[idx][0].split("|||")[1])]).half()
         
         data = np.load(path)
-        tokens = torch.from_numpy(data).half()
+        tokens = torch.from_numpy(data['node_rep']).half()
 
         return (tokens, edges_tensor, problemType), label
 
@@ -39,6 +39,8 @@ def scatter(inputs, target_gpus, dim=0):
             return list(zip(*map(scatter_map, obj)))
         if isinstance(obj, list) and len(obj) > 0:
             size = len(obj) // len(target_gpus) + 1
+            if len(obj) % len(target_gpus) == 0:
+                size-=1 
             return [obj[i * size:(i + 1) * size] for i in range(len(target_gpus))]
         if isinstance(obj, dict) and len(obj) > 0:
             return list(map(type(obj), zip(*map(scatter_map, obj.items()))))
