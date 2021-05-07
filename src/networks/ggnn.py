@@ -20,7 +20,7 @@ class GGNN(nn.Module):
         self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
 
-    def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):
+    def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch, tbptt):
         """
         backwards_edge_dictBatch: A batch of dicts. Each key in the dict is a node, the value for each key is the nodes inset
         The forward function of the neural net. For each pass, perform the GGNN step: for each graph G, for each node N
@@ -34,7 +34,7 @@ class GGNN(nn.Module):
             nodesBatch[i] = nodesBatch[i].to(torch.cuda.current_device())
             problemTypeBatch[i] = problemTypeBatch[i].to(torch.cuda.current_device())
 
-        for _ in range(self.passes):
+        for j in range(self.passes):
             for i in range(len(nodesBatch)):
                 incoming = torch.zeros_like(nodesBatch[i])
                 counter = 0
@@ -48,6 +48,8 @@ class GGNN(nn.Module):
                         continue #Empty Edge Set
                     counter+=1
                 nodesBatch[i] = self.gru(incoming, nodesBatch[i])
+                if j < self.passes - 2 and tbptt == 1:
+                    nodesBatch[i] = nodesBatch[i].detach()
 
         for i in range(len(nodesBatch)):
                 nodesBatch[i] = nodesBatch[i].sum(dim=0)
@@ -76,7 +78,7 @@ def my_collate(batch):
 
     return (((tokens), backwards_edges, problemType), labels)
 
-def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
+def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs, tbptt):
     train_loader = torch.utils.data.DataLoader(dataset=trainset, shuffle=True, batch_size=batchSize, collate_fn=my_collate)
     val_loader = torch.utils.data.DataLoader(dataset=valset, shuffle=True, batch_size=batchSize, collate_fn=my_collate)
 
@@ -96,7 +98,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             problemTypes.cuda()
             labels = labels.cuda()
             with autocast():
-                scores = model(tokenSets, backwards_edge, problemTypes)
+                scores = model(tokenSets, backwards_edge, problemTypes, tbptt)
                 loss = loss_fn(scores, labels, lossTensor)
             cum_loss+=loss.cpu().detach().item()
 
@@ -109,7 +111,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             loss.backward()
             model.float()
             optimizer.step()
-            if (i+1)%25==0 or (i+1)==len(train_loader):
+            if (i+1)%500==0 or (i+1)==len(train_loader):
                 mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i+1), 4)) + ", Avg-Corr:" +  str(round(corr_sum/((i+1)*batchSize),4))
                 print(mystr)
                 train_accuracies.append(round(corr_sum/((i+1)*batchSize),4))
@@ -128,7 +130,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             lossTensor = torch.FloatTensor([0]).cuda()
             with autocast():
                 with torch.no_grad():
-                    scores = model(tokenSets, backwards_edge_dicts, problemTypes)
+                    scores = model(tokenSets, backwards_edge_dicts, problemTypes, tbptt)
                     loss =loss_fn(scores, labels, lossTensor)
                     cum_loss+=loss.cpu().detach().item()
 
