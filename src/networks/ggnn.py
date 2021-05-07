@@ -104,12 +104,6 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum+=corr
                 assert(corr <=1)
-            #bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
-            
-            #for j in range(len(scores)):
-            #    if (labels[j]>0).sum():
-            #        aCorrect += (labels[j][scores[j].argmax()]>0).item()
-            #        aCorrectPossible+=1
 
             optimizer.zero_grad()
             loss.backward()
@@ -137,22 +131,17 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                     scores = model(tokenSets, backwards_edge_dicts, problemTypes)
                     loss =loss_fn(scores, labels, lossTensor)
                     cum_loss+=loss.cpu().detach().item()
-            #bestCorrect+=(scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
-            #for j in range(len(scores)):
-            #    if (labels[j]>0).sum():
-            #        aCorrect += (labels[j][scores[j].argmax()]>0).item()
-            #        aCorrectPossible+=1
 
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum += corr
         del lossTensor
 
-        scheduler.step(cumLossTensor.item())
-        val_accuracies.append(corr_sum/(len(val_loader)*batchSize))
+        scheduler.step(cum_loss/(i+1))
+        val_accuracies.append(corr_sum/(len(valset)))
         val_losses.append(cum_loss/(i+1))
 
-        mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(val_loader)),4))
+        mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(valset)),4))
         print(mystr)
         if optimizer.param_groups[0]['lr']<1e-7:
             break
