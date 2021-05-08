@@ -79,8 +79,11 @@ def my_collate(batch):
     return (((tokens), backwards_edges, problemType), labels)
 
 def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
-    train_loader = torch.utils.data.DataLoader(dataset=trainset, shuffle=True, batch_size=batchSize, collate_fn=my_collate)
-    val_loader = torch.utils.data.DataLoader(dataset=valset, shuffle=True, batch_size=batchSize, collate_fn=my_collate)
+    train_sampler = DistributedSampler(trainset)
+    val_sampler = DistributedSampler(valset)
+    
+    train_loader = torch.utils.data.DataLoader(dataset=trainset, sampler=train_sampler, batch_size=batchSize, collate_fn=my_collate)
+    val_loader = torch.utils.data.DataLoader(dataset=valset, sampler=val_sampler, batch_size=batchSize, collate_fn=my_collate)
 
     train_accuracies = []; val_accuracies = []
     train_losses = []; val_losses = []
@@ -111,11 +114,16 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             loss.backward()
             model.float()
             optimizer.step()
-            if (i+1)%500==0 or (i+1)==len(train_loader):
-                mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i+1), 4)) + ", Avg-Corr:" +  str(round(corr_sum/((i+1)*batchSize),4))
+            lossTensor = torch.Tensor([cum_loss/(i+1)]).cuda()
+            corrTensor = torch.Tensor([corr_sum/((i+1)*batchSize)]).cuda()
+
+            dist.all_reduce(lossTensor, op=ReduceOp.SUM)
+            dist.all_reduce(corrTensor, op=ReduceOp.SUM)
+            if (i+1)%50==0 or (i+1)==len(train_loader):
+                mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(lossTensor.item()/(dist.get_world_size()), 4)) + ", Avg-Corr:" +  str(round(corrTensor.item()/(dist.get_world_size()), 4))
                 print(mystr)
-                train_accuracies.append(round(corr_sum/((i+1)*batchSize),4))
-                train_losses.append(round(cum_loss/(i+1),4))
+                train_accuracies.append(round(corrTensor.item()/(dist.get_world_size()), 4))
+                train_losses.append(round(lossTensor.item()/(dist.get_world_size()), 4))
             del lossTensor
 
         corr_sum = 0.0
@@ -125,7 +133,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         for (i, ((tokenSets, backwards_edge_dicts, problemTypes), labels)) in enumerate((val_loader)):
             for item in range(len(tokenSets)):
                 tokenSets[item] = tokenSets[item].cuda()
-            problemTypes.cuda()
+            problemTypes = problemTypes.cuda()
             labels = labels.cuda()
             lossTensor = torch.FloatTensor([0]).cuda()
             with autocast():
@@ -139,11 +147,18 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                 corr_sum += corr
         del lossTensor
 
-        scheduler.step(cum_loss/(i+1))
-        val_accuracies.append(corr_sum/(len(valset)))
-        val_losses.append(cum_loss/(i+1))
+        lossTensor = torch.Tensor([cum_loss/(i+1)]).cuda()
+        corrTensor = torch.Tensor([corr_sum/((i+1)*batchSize)]).cuda()
 
-        mystr = "Validation-epoch " + str(epoch) + " Avg-Loss:" +  str(round(cum_loss/(i+1),4)) + ", Avg-Corr:" +  str(round(corr_sum/(len(valset)),4))
+        dist.all_reduce(lossTensor, op=ReduceOp.SUM)
+        dist.all_reduce(corrTensor, op=ReduceOp.SUM)
+        scheduler.step(cum_loss/(i+1))
+
+
+        val_accuracies.append(round(corrTensor.item()/(dist.get_world_size()), 4))
+        val_losses.append(round(lossTensor.item()/(dist.get_world_size()), 4))
+
+        mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(lossTensor.item()/(dist.get_world_size()), 4)) + ", Avg-Corr:" +  str(round(corrTensor.item()/(dist.get_world_size()), 4))
         print(mystr)
         if optimizer.param_groups[0]['lr']<1e-7:
             break
