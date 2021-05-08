@@ -20,7 +20,7 @@ class GGNN(nn.Module):
         self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
 
-    def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch, tbptt):
+    def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):
         """
         backwards_edge_dictBatch: A batch of dicts. Each key in the dict is a node, the value for each key is the nodes inset
         The forward function of the neural net. For each pass, perform the GGNN step: for each graph G, for each node N
@@ -30,10 +30,9 @@ class GGNN(nn.Module):
         Pass the graph feature vectors through two linear layers with a tanh activation function in between and return
         the scores
         """
-        for i in range(len(nodesBatch)):
-            nodesBatch[i] = nodesBatch[i].to(torch.cuda.current_device())
-            problemTypeBatch[i] = problemTypeBatch[i].to(torch.cuda.current_device())
-
+        # for i in range(len(nodesBatch)):
+        #     nodesBatch[i] = nodesBatch[i].to(torch.cuda.current_device())
+        #     problemTypeBatch[i] = problemTypeBatch[i].to(torch.cuda.current_device())      
         for j in range(self.passes):
             for i in range(len(nodesBatch)):
                 incoming = torch.zeros_like(nodesBatch[i])
@@ -48,14 +47,15 @@ class GGNN(nn.Module):
                         continue #Empty Edge Set
                     counter+=1
                 nodesBatch[i] = self.gru(incoming, nodesBatch[i])
-                if j < self.passes - 2 and tbptt == 1:
+                if j < self.passes - 2:
                     nodesBatch[i] = nodesBatch[i].detach()
-
+        
         for i in range(len(nodesBatch)):
                 nodesBatch[i] = nodesBatch[i].sum(dim=0)
                 nodesBatch[i] = torch.log(nodesBatch[i])
                 nodesBatch[i][torch.isnan(nodesBatch[i])] = 0
                 nodesBatch[i] = f.relu(nodesBatch[i])
+        
         x = torch.stack(nodesBatch)
         x = torch.cat((x, problemTypeBatch), dim=1)
         x = self.fc1(x)
@@ -78,7 +78,7 @@ def my_collate(batch):
 
     return (((tokens), backwards_edges, problemType), labels)
 
-def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs, tbptt):
+def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
     train_loader = torch.utils.data.DataLoader(dataset=trainset, shuffle=True, batch_size=batchSize, collate_fn=my_collate)
     val_loader = torch.utils.data.DataLoader(dataset=valset, shuffle=True, batch_size=batchSize, collate_fn=my_collate)
 
@@ -95,11 +95,11 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             lossTensor = torch.FloatTensor([0]).cuda()
             for item in range(len(tokenSets)):
                 tokenSets[item] = tokenSets[item].cuda()
-            problemTypes.cuda()
+            problemTypes = problemTypes.cuda()
             labels = labels.cuda()
             with autocast():
-                scores = model(tokenSets, backwards_edge, problemTypes, tbptt)
-                loss = loss_fn(scores, labels, lossTensor)
+                scores = model(tokenSets, backwards_edge, problemTypes)
+                loss = loss_fn(scores, labels, lossTensor)      
             cum_loss+=loss.cpu().detach().item()
 
             for j in range(len(labels)):
@@ -130,7 +130,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             lossTensor = torch.FloatTensor([0]).cuda()
             with autocast():
                 with torch.no_grad():
-                    scores = model(tokenSets, backwards_edge_dicts, problemTypes, tbptt)
+                    scores = model(tokenSets, backwards_edge_dicts, problemTypes)
                     loss =loss_fn(scores, labels, lossTensor)
                     cum_loss+=loss.cpu().detach().item()
 
