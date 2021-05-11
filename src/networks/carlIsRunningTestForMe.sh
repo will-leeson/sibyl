@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export NUM_NODES=1
-export NUM_GPUS_PER_NODE=1
+export NUM_GPUS_PER_NODE=2
 export NODE_RANK=0
 export WORLD_SIZE=$(($NUM_NODES * $NUM_GPUS_PER_NODE))
 
