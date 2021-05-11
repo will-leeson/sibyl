@@ -1,5 +1,5 @@
-from ggnn import GGNN_NoGRU
-from utils.utils import GraphDataset, modified_margin_rank_loss_cuda, cleanup, train_model
+from ggnn import GGNN, GGNN_NoGRU, GGNN_NoGRU_NoEdgeNets
+from utils.utils import GraphDataset, modified_margin_rank_loss_cuda, cleanup, train_model, getCorrectEdgeTypes, evaluate
 import torch, json, os, sys, datetime, argparse
 import torch.nn as nn
 import torch.optim as optim
@@ -13,6 +13,7 @@ if __name__ == '__main__':
 	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "CFG"], choices=['AST', 'DFG', "CFG"])
 	parser.add_argument("-p", "--problem-types", help="Which problem types to consider:termination, overflow, reachSafety, memSafety (Default=All)", nargs="+", default=['termination', 'overflow', 'reachSafety', 'memSafety'], choices=['termination', 'overflow', 'reachSafety', 'memSafety'])
 	parser.add_argument('--local_rank', type=int, default=-1, metavar='N', help='Local process rank.')
+	parser.add_argument('--architecture', help="0=Base GGNN, 1=GGNN w/o GRU, 2=GGNN w/o GRU, w/o edge nets", default=0, choices=[0,1,2])
 
 	args = parser.parse_args()
 	rank = args.local_rank
@@ -20,39 +21,44 @@ if __name__ == '__main__':
 
 	trainFiles = json.load(open("../../data/trainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
-	if "overflow" not in args.problem_types:
-		trainLabels = [item for item in trainLabels if item[0].split("|||")[1]!="0"]
-	if "reachSafety" not in args.problem_types:
-		trainLabels = [item for item in trainLabels if item[0].split("|||")[1]!="1"]
-	if "termination" not in args.problem_types:
-		trainLabels = [item for item in trainLabels if item[0].split("|||")[1]!="2"]
-	if "memSafety" not in args.problem_types:
-		trainLabels = [item for item in trainLabels if item[0].split("|||")[1]!="3"]
+	trainLabels = getCorrectEdgeTypes(trainLabels, args.problem_types)
 
 	valFiles = json.load(open("../../data/valFiles.json"))
 	valLabels = [(key, [item[1] for item in valFiles[key]]) for key in valFiles]
+	valLabels = getCorrectEdgeTypes(valLabels, args.problem_types)
 
-	if "overflow" not in args.problem_types:
-		valLabels = [item for item in valLabels if item[0].split("|||")[1]!="0"]
-	if "reachSafety" not in args.problem_types:
-		valLabels = [item for item in valLabels if item[0].split("|||")[1]!="1"]
-	if "termination" not in args.problem_types:
-		valLabels = [item for item in valLabels if item[0].split("|||")[1]!="2"]
-	if "memSafety" not in args.problem_types:
-		valLabels = [item for item in valLabels if item[0].split("|||")[1]!="3"]
+	testFiles = json.load(open("../../data/testFiles.json"))
+	testLabels = [(key, [item[1] for item in testFiles[key]]) for key in testFiles]
+	testLabels = getCorrectEdgeTypes(testLabels, args.problem_types)
 
 	train_set = GraphDataset(trainLabels, "../../data/final_graphs/", args.edge_sets)
 	val_set = GraphDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
+	test_set = GraphDataset(testLabels, "../../data/final_graphs/", args.edge_sets)
 	dist.init_process_group(backend='nccl', init_method='env://')
-	model = GGNN_NoGRU(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).to(device=torch.cuda.current_device())
+	
+	modelType = None
+	if args.architecture == 0:
+		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).to(device=torch.cuda.current_device())
+		modelType = "GGNN"
+	elif args.architecture == 1:
+		model = GGNN_NoGRU(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).to(device=torch.cuda.current_device())
+		modelType = "GGNNNoGRU"
+	else:
+		model = GGNN_NoGRU_NoEdgeNets(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).to(device=torch.cuda.current_device())
+		modelType = "GGNNNoGRUNoEdgeNet"
+
 	ddp_model = nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank)
 
 	loss_fn = modified_margin_rank_loss_cuda
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
-	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
+	report = train_model(model=model, loss_fn = loss_fn, batchSize=20, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
 	train_acc, train_loss, val_acc, val_loss = report
-	np.savez_compressed(str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss)
-	torch.save(model.state_dict(), str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".pt")
+	if args.local_rank == 0:
+		test_data = evaluate(model, test_set)
+		print(test_data)
+		np.savez_compressed(modelType+str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss, test_data)
+		torch.save(model.state_dict(), modelType+str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".pt")
+		
 
 	cleanup()

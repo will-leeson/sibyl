@@ -149,3 +149,45 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             break
     
     return train_accuracies, train_losses, val_accuracies, val_losses
+
+def evaluate(model, test_set):
+    corr_sum = 0.0
+    bestPredicts = 0
+    correctPredicts = 0
+
+    model.eval()
+
+    test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=1, collate_fn=my_collate)
+
+    for (i, ((tokenSets, backwards_edge_dicts, problemTypes), labels)) in enumerate(tqdm.tqdm(test_loader)):
+        for item in range(len(tokenSets)):
+            tokenSets[item] = tokenSets[item].cuda()
+        problemTypes = problemTypes.cuda()
+        labels = labels.cuda()
+        with autocast():
+            with torch.no_grad():
+                scores = model(tokenSets, backwards_edge_dicts, problemTypes)
+
+        for j in range(len(labels)):
+            corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
+            corr_sum += corr
+
+        bestPredicts += (scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
+
+        maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
+        gather = labels.gather(1, maxScoresIdx)
+        correctPredicts+=(gather>1).sum().item()
+
+    return [corr_sum/i, bestPredicts/i, correctPredicts/i]
+
+def getCorrectEdgeTypes(labels, edgeTypes):
+    if "overflow" not in edgeTypes:
+	    labels = [item for item in labels if item[0].split("|||")[1]!="0"]
+    if "reachSafety" not in edgeTypes:
+    	labels = [item for item in labels if item[0].split("|||")[1]!="1"]
+    if "termination" not in edgeTypes:
+        labels = [item for item in labels if item[0].split("|||")[1]!="2"]
+    if "memSafety" not in edgeTypes:
+        labels = [item for item in labels if item[0].split("|||")[1]!="3"]
+
+    return labels
