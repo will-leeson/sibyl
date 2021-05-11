@@ -11,4 +11,4 @@ python3 -W ignore -m torch.distributed.launch \
     --nnodes=$NUM_NODES \
     --node_rank $NODE_RANK \
     --master_port=$3 \
-    netTrainer.py -t $1 -e 50 \
+    netWOGRUTrainer.sh -t $1 -e 50 \
