@@ -41,11 +41,12 @@ class GGNN(nn.Module):
                     try:
                         y = self.edgeNets[counter][0](nodesBatch[i][edgeSet[:,1]])
                         y = f.leaky_relu(y)
-                        y = self.edgeNets[counter][1](nodesBatch[i][edgeSet[:,1]])
+                        y = self.edgeNets[counter][1](y)
                         incoming = incoming.index_add(0, edgeSet[:,0], y)
                     except:
                         continue #Empty Edge Set
                     counter+=1
+                nodesBatch[i] = nodesBatch[i] + incoming
                 nodesBatch[i] = self.gru(incoming, nodesBatch[i])
                 if j < self.passes - 2:
                     nodesBatch[i] = nodesBatch[i].detach()
@@ -158,7 +159,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         val_accuracies.append(round(corrTensor.item()/(dist.get_world_size()), 4))
         val_losses.append(round(lossTensor.item()/(dist.get_world_size()), 4))
 
-        mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(lossTensor.item()/(dist.get_world_size()), 4)) + ", Avg-Corr:" +  str(round(corrTensor.item()/(dist.get_world_size()), 4))
+        mystr = "Valid-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(lossTensor.item()/(dist.get_world_size()), 4)) + ", Avg-Corr:" +  str(round(corrTensor.item()/(dist.get_world_size()), 4))
         print(mystr)
         if optimizer.param_groups[0]['lr']<1e-7:
             break
