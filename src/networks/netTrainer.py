@@ -56,9 +56,9 @@ if __name__ == '__main__':
 	train_acc, train_loss, val_acc, val_loss = report
 	if args.local_rank == 0:
 		test_data = evaluate(model, test_set)
-		print(test_data)
 		np.savez_compressed(modelType+str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss, test_data)
 		torch.save(model.state_dict(), modelType+str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".pt")
-		
+	
+	dist.barrier()
 
 	cleanup()

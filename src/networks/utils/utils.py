@@ -80,6 +80,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         torch.enable_grad()
 
         for (i, ((tokenSets, backwards_edge, problemTypes), labels)) in enumerate(tqdm.tqdm(train_loader)):
+            dist.barrier()
             lossTensor = torch.FloatTensor([0]).cuda()
             for item in range(len(tokenSets)):
                 tokenSets[item] = tokenSets[item].cuda()
@@ -154,6 +155,7 @@ def evaluate(model, test_set):
     corr_sum = 0.0
     bestPredicts = 0
     correctPredicts = 0
+    possibleCorrect = 0
 
     model.eval()
 
@@ -176,9 +178,12 @@ def evaluate(model, test_set):
 
         maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
         gather = labels.gather(1, maxScoresIdx)
-        correctPredicts+=(gather>1).sum().item()
+        correctPredicts+=(gather>0).sum().item()
+        
+        if labels.max() > 0:
+            possibleCorrect+=1
 
-    return [corr_sum/i, bestPredicts/i, correctPredicts/i]
+    return [corr_sum/i, bestPredicts/i, correctPredicts/possibleCorrect]
 
 def getCorrectEdgeTypes(labels, edgeTypes):
     if "overflow" not in edgeTypes:
