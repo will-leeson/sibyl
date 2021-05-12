@@ -13,7 +13,7 @@ if __name__ == '__main__':
 	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "CFG"], choices=['AST', 'DFG', "CFG"])
 	parser.add_argument("-p", "--problem-types", help="Which problem types to consider:termination, overflow, reachSafety, memSafety (Default=All)", nargs="+", default=['termination', 'overflow', 'reachSafety', 'memSafety'], choices=['termination', 'overflow', 'reachSafety', 'memSafety'])
 	parser.add_argument('--local_rank', type=int, default=-1, metavar='N', help='Local process rank.')
-	parser.add_argument('--architecture', help="0=Base GGNN, 1=GGNN w/o GRU, 2=GGNN w/o GRU, w/o edge nets", default=0, choices=[0,1,2])
+	parser.add_argument('--architecture', help="0=Base GGNN, 1=GGNN w/o GRU, 2=GGNN w/o GRU, w/o edge nets", type=int, default=0, choices=[0,1,2])
 
 	args = parser.parse_args()
 	rank = args.local_rank
