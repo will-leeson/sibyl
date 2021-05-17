@@ -1,5 +1,12 @@
 import glob, csv, os, json
 
+'''
+File - resultCompiler.py
+
+This file will look through the sv-comp results to
+produce the labels for files
+'''
+
 solFiles = glob.glob("../../data/sv-results/*.csv")
 results = dict()
 

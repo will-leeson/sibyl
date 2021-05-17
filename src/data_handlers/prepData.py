@@ -1,12 +1,22 @@
-import glob, json, os.path, sys, tqdm
+import glob, json, tqdm
 import multiprocessing as mp
-import numpy as np, torch
+import numpy as np
+
+'''
+File - prepData.py
+
+This file will take the graphs produced by dataFormatter.py and
+produce the final representation of the graphs. It will produce
+the representation of each node in the graph for the GGNN to
+perform calculations on. It will also produce a set of edge files
+which will contain the edges
+'''
 
 graphs = glob.glob("../../data/graphs/*.json")
 results = json.load(open("../../data/SV-CompResults.json"))
 tokenDict = json.load(open("../../data/tokenDict.json"))
 
-def handler(graph):
+def makeFinalRep(graph):
     graphDict = dict()
     if "../../data/graphs/"+graph in graphs:
         graphDict = json.load(open("../../data/graphs/"+graph))
@@ -59,11 +69,8 @@ def handler(graph):
     np.savez_compressed("../../data/final_graphs/"+graph+"Edges.npz", AST = np.array(ASTDict), CFG = np.array(CFGDict), DFG = np.array(DFGDict))
     np.savez_compressed("../../data/final_graphs/"+graph+".npz", node_rep = nodeRepresentations)
     
-
-# handler("ddv_machzwd_all_false-unreach-call_true-valid-memsafety.i.json")
-
 pool = mp.Pool((mp.cpu_count()-1))
-result_object = [pool.apply_async(handler, args=([key.split("|||")[0]])) for key in results]
+result_object = [pool.apply_async(makeFinalRep, args=([key.split("|||")[0]])) for key in results]
 
 thing = [r.get() for r in tqdm.tqdm(result_object)]
 

@@ -1,5 +1,15 @@
-import json, glob, re, time, os, tqdm
+import json, glob, os, tqdm
 import multiprocessing as mp
+
+'''
+File - dataFormatter.py
+
+This file will parse the raw graphs produced by dataCollector.py
+It will create dictionaries for all edge types. It will also use 
+control and dataflow information to produce more data flow edges
+using reaching definition
+'''
+
 
 def reachableDefs(cfgDict, genKillDict, stmtToNum, backwardsCFGDict, start):
     reachDefs = dict()

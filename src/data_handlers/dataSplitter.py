@@ -1,5 +1,12 @@
 import os, json, torch
 
+'''
+File - dataSplitter.py
+
+This file will split the entire dataset into train, validation, and test sets.
+It will be a 80/10/10 split, respectively
+'''
+
 resultFile = json.load(open("../../data/SV-CompResults.json"))
 
 files = [[],[],[],[]]

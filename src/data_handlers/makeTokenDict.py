@@ -1,4 +1,14 @@
-import glob, json, tqdm, time
+import glob, json, tqdm
+
+'''
+File - makeTokenDict
+
+This file will look at all graphs in the training set.
+For each unique token, it will map it to a number. This
+number is the index in the token representation array
+that corresponds to that token
+
+'''
 
 files = glob.glob("../../data/graphs/*.json")
 
@@ -19,4 +29,4 @@ for item in tokenSet:
     tokenDict[item] = counter
     counter+=1
 
-json.dump(tokenDict, open("../../data/tokenDict2.json", 'w'))
+json.dump(tokenDict, open("../../data/tokenDict.json", 'w'))
