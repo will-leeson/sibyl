@@ -17,7 +17,7 @@ for line in programs:
         files.append(line.strip())
 
 def handler(filename):
-    output = os.system("timeout 300 ~/Workspace/llvm-project/build/bin/graph-builder "+filename+" > ../../data/raw/"+os.path.basename(filename)+".txt 2>err.txt || exit 1")
+    output = os.system("timeout 300 ../graph-builder/graph-builder "+filename+" > ../../data/raw/"+os.path.basename(filename)+".txt 2>err.txt || exit 1")
     if output != 0:
         return filename+"\n"
     else:

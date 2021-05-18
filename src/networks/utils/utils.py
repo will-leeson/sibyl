@@ -1,7 +1,7 @@
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from torch.nn import MarginRankingLoss
 import torch
-import os, itertools, sys, tempfile, tqdm
+import os, itertools, tqdm
 import numpy as np
 from scipy.stats import spearmanr
 import torch.distributed as dist
@@ -9,7 +9,15 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.distributed import ReduceOp
 from torch.cuda.amp import autocast
 
+'''
+File - utils.py
+This file defines some utility functions
+'''
+
 class GraphDataset(Dataset):
+    '''
+    This class defines the Dataset for graphs types
+    '''
     def __init__(self, labels, data_dir, edge_sets):
         self.labels = labels
         self.data_dir = data_dir
@@ -34,6 +42,13 @@ class GraphDataset(Dataset):
 
 
 def modified_margin_rank_loss(scoresBatch, labelsBatch, lossTensor):
+    '''
+    This function defines my loss function
+    For each combination of comparison between verifiers, get the loss for
+    the prediction using MarginRankingLoss. We incentivize larger margins 
+    between larger difference in rankings, i.e. rank 1 should be further from 
+    rank 3 than rank 2.
+    '''
     loss_fn = MarginRankingLoss(margin=0.1)
     for i, j in itertools.combinations(list(range(len(labelsBatch[0]))),2):
         trueComparison = torch.where(labelsBatch[:,i]>labelsBatch[:,j], 1, -1)
@@ -41,6 +56,9 @@ def modified_margin_rank_loss(scoresBatch, labelsBatch, lossTensor):
     return lossTensor
 
 def modified_margin_rank_loss_cuda(scoresBatch, labelsBatch, lossTensor):
+    '''
+    Cuda version of modified_margin_rank_loss function
+    '''
     for i, j in itertools.combinations(list(range(len(labelsBatch[0]))),2):
         loss_fn = MarginRankingLoss(margin=0.1*abs(i-j)).cuda()
         trueComparison = torch.where(labelsBatch[:,i]>labelsBatch[:,j], torch.tensor(1).cuda(), torch.tensor(-1).cuda()).cuda()
@@ -64,6 +82,9 @@ def my_collate(batch):
     return (((tokens), backwards_edges, problemType), labels)
 
 def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
+    '''
+    Function used to train networks
+    '''
     train_sampler = DistributedSampler(trainset)
     val_sampler = DistributedSampler(valset)
     
@@ -152,6 +173,9 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
     return train_accuracies, train_losses, val_accuracies, val_losses
 
 def evaluate(model, test_set):
+    '''
+    Function used to evaluate model on test set
+    '''
     corr_sum = 0.0
     bestPredicts = 0
     correctPredicts = 0
@@ -185,14 +209,17 @@ def evaluate(model, test_set):
 
     return [corr_sum/i, bestPredicts/i, correctPredicts/possibleCorrect]
 
-def getCorrectEdgeTypes(labels, edgeTypes):
-    if "overflow" not in edgeTypes:
+def getCorrectProblemTypes(labels, problemTypes):
+    '''
+    Function used to make sure we are only looking at problem types that we want
+    '''
+    if "overflow" not in problemTypes:
 	    labels = [item for item in labels if item[0].split("|||")[1]!="0"]
-    if "reachSafety" not in edgeTypes:
+    if "reachSafety" not in problemTypes:
     	labels = [item for item in labels if item[0].split("|||")[1]!="1"]
-    if "termination" not in edgeTypes:
+    if "termination" not in problemTypes:
         labels = [item for item in labels if item[0].split("|||")[1]!="2"]
-    if "memSafety" not in edgeTypes:
+    if "memSafety" not in problemTypes:
         labels = [item for item in labels if item[0].split("|||")[1]!="3"]
 
     return labels

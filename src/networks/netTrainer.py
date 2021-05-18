@@ -1,10 +1,16 @@
 from ggnn import GGNN, GGNN_NoGRU, GGNN_NoGRU_NoEdgeNets
-from utils.utils import GraphDataset, modified_margin_rank_loss_cuda, cleanup, train_model, getCorrectEdgeTypes, evaluate
-import torch, json, os, sys, datetime, argparse
+from utils.utils import GraphDataset, modified_margin_rank_loss_cuda, cleanup, train_model, getCorrectProblemTypes, evaluate
+import torch, json, datetime, argparse
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import torch.distributed as dist
+
+'''
+File - netTrainer.py
+
+This file is a driver used to train networks
+'''
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="GGNN Trainer")
@@ -21,15 +27,15 @@ if __name__ == '__main__':
 
 	trainFiles = json.load(open("../../data/trainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
-	trainLabels = getCorrectEdgeTypes(trainLabels, args.problem_types)
+	trainLabels = getCorrectProblemTypes(trainLabels, args.problem_types)
 
 	valFiles = json.load(open("../../data/valFiles.json"))
 	valLabels = [(key, [item[1] for item in valFiles[key]]) for key in valFiles]
-	valLabels = getCorrectEdgeTypes(valLabels, args.problem_types)
+	valLabels = getCorrectProblemTypes(valLabels, args.problem_types)
 
 	testFiles = json.load(open("../../data/testFiles.json"))
 	testLabels = [(key, [item[1] for item in testFiles[key]]) for key in testFiles]
-	testLabels = getCorrectEdgeTypes(testLabels, args.problem_types)
+	testLabels = getCorrectProblemTypes(testLabels, args.problem_types)
 
 	train_set = GraphDataset(trainLabels, "../../data/final_graphs/", args.edge_sets)
 	val_set = GraphDataset(valLabels, "../../data/final_graphs/", args.edge_sets)

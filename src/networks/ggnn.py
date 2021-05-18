@@ -1,8 +1,19 @@
-import torch, subprocess
+import torch
 import torch.nn as nn
 import torch.nn.functional as f
 
+'''
+File - ggnn.py
+
+This file includes three architectures for GGNNs, two of which do not
+actually use gated recurrent units.
+'''
+
 class GGNN(nn.Module):
+    '''
+    Base GGNN class
+    This Graph Neural Network includes a GRU to produce new node representations
+    '''
     def __init__(self, passes, numEdgeSets):
         super(GGNN, self).__init__()
         self.passes = passes
@@ -15,15 +26,6 @@ class GGNN(nn.Module):
         self.fcLast = nn.Linear(80, 10)
 
     def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):
-        """
-        backwards_edge_dictBatch: A batch of dicts. Each key in the dict is a node, the value for each key is the nodes inset
-        The forward function of the neural net. For each pass, perform the GGNN step: for each graph G, for each node N
-        in G, collect the sum, S, of N's inset nodes. Pass N's representation with S. This is the new representation of N.
-        Once all passes are complete, sum the nodes representations in a graph to form a graph feature vector. Take the
-        log of this representation (negative values and -inf values become 0) so graph size doesn't ruin the network.
-        Pass the graph feature vectors through two linear layers with a tanh activation function in between and return
-        the scores
-        """    
         for j in range(self.passes):
             for i in range(len(nodesBatch)):
                 incoming = torch.zeros_like(nodesBatch[i])
@@ -57,6 +59,9 @@ class GGNN(nn.Module):
         return x
 
 class GGNN_NoGRU(nn.Module):
+    '''
+    GGNN without GRU, so more aptly a GNN
+    '''
     def __init__(self, passes, numEdgeSets):
         super(GGNN_NoGRU, self).__init__()
         self.passes = passes
@@ -68,15 +73,6 @@ class GGNN_NoGRU(nn.Module):
         self.fcLast = nn.Linear(80, 10)
 
     def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):
-        """
-        backwards_edge_dictBatch: A batch of dicts. Each key in the dict is a node, the value for each key is the nodes inset
-        The forward function of the neural net. For each pass, perform the GGNN step: for each graph G, for each node N
-        in G, collect the sum, S, of N's inset nodes. Pass N's representation with S. This is the new representation of N.
-        Once all passes are complete, sum the nodes representations in a graph to form a graph feature vector. Take the
-        log of this representation (negative values and -inf values become 0) so graph size doesn't ruin the network.
-        Pass the graph feature vectors through two linear layers with a tanh activation function in between and return
-        the scores
-        """    
         for j in range(self.passes):
             for i in range(len(nodesBatch)):
                 incoming = torch.zeros_like(nodesBatch[i])
@@ -108,6 +104,9 @@ class GGNN_NoGRU(nn.Module):
         return x
 
 class GGNN_NoGRU_NoEdgeNets(nn.Module):
+    '''
+    Base GGNN with GRU or edgenets
+    '''
     def __init__(self, passes, numEdgeSets):
         super(GGNN_NoGRU_NoEdgeNets, self).__init__()
         self.passes = passes
@@ -115,16 +114,7 @@ class GGNN_NoGRU_NoEdgeNets(nn.Module):
         self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
 
-    def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):
-        """
-        backwards_edge_dictBatch: A batch of dicts. Each key in the dict is a node, the value for each key is the nodes inset
-        The forward function of the neural net. For each pass, perform the GGNN step: for each graph G, for each node N
-        in G, collect the sum, S, of N's inset nodes. Pass N's representation with S. This is the new representation of N.
-        Once all passes are complete, sum the nodes representations in a graph to form a graph feature vector. Take the
-        log of this representation (negative values and -inf values become 0) so graph size doesn't ruin the network.
-        Pass the graph feature vectors through two linear layers with a tanh activation function in between and return
-        the scores
-        """    
+    def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):  
         for j in range(self.passes):
             for i in range(len(nodesBatch)):
                 incoming = torch.zeros_like(nodesBatch[i])

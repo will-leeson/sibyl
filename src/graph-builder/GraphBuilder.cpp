@@ -12,6 +12,13 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
+/*
+ * File - GraphBuilder.cpp
+ * This file produces LLVM pass responsible for producing the nodes and egdes of the
+ * graph the GGNN will operate on. It uses the RecursiveASTVisitor from ClangAST
+*/
+
+
 using namespace clang;
 using namespace llvm;
 using namespace clang::tooling;
