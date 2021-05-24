@@ -20,6 +20,7 @@ if __name__ == '__main__':
 	parser.add_argument("-p", "--problem-types", help="Which problem types to consider:termination, overflow, reachSafety, memSafety (Default=All)", nargs="+", default=['termination', 'overflow', 'reachSafety', 'memSafety'], choices=['termination', 'overflow', 'reachSafety', 'memSafety'])
 	parser.add_argument('--local_rank', type=int, default=-1, metavar='N', help='Local process rank.')
 	parser.add_argument('--architecture', help="0=Base GGNN, 1=GGNN w/o GRU, 2=GGNN w/o GRU, w/o edge nets", type=int, default=0, choices=[0,1,2])
+	parser.add_argument("--hidden-layers", help="Number of hidden layers", type=int, default=1)
 
 	args = parser.parse_args()
 	rank = args.local_rank
@@ -44,13 +45,13 @@ if __name__ == '__main__':
 	
 	modelType = None
 	if args.architecture == 0:
-		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).to(device=torch.cuda.current_device())
+		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numHiddenLayers=args.hidden_layers).to(device=torch.cuda.current_device())
 		modelType = "GGNN"
 	elif args.architecture == 1:
-		model = GGNN_NoGRU(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).to(device=torch.cuda.current_device())
+		model = GGNN_NoGRU(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numHiddenLayers=args.hidden_layers).to(device=torch.cuda.current_device())
 		modelType = "GGNNNoGRU"
 	else:
-		model = GGNN_NoGRU_NoEdgeNets(passes=args.time_steps, numEdgeSets=len(args.edge_sets)).to(device=torch.cuda.current_device())
+		model = GGNN_NoGRU_NoEdgeNets(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numHiddenLayers=args.hidden_layers).to(device=torch.cuda.current_device())
 		modelType = "GGNNNoGRUNoEdgeNet"
 
 	ddp_model = nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank)
@@ -58,7 +59,7 @@ if __name__ == '__main__':
 	loss_fn = modified_margin_rank_loss_cuda
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
-	report = train_model(model=model, loss_fn = loss_fn, batchSize=20, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
+	report = train_model(model=model, loss_fn = loss_fn, batchSize=3, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
 	train_acc, train_loss, val_acc, val_loss = report
 	if args.local_rank == 0:
 		test_data = evaluate(model, test_set)

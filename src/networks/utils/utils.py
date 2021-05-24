@@ -1,8 +1,9 @@
 from operator import pos
+from numpy.core.fromnumeric import sort
 from torch.utils.data import Dataset
 from torch.nn import MarginRankingLoss
 import torch
-import os, itertools, tqdm
+import os, itertools, tqdm, time
 import numpy as np
 from scipy.stats import spearmanr
 import torch.distributed as dist
@@ -60,10 +61,12 @@ def modified_margin_rank_loss_cuda(scoresBatch, labelsBatch, lossTensor):
     '''
     Cuda version of modified_margin_rank_loss function
     '''
+    sortedArgs = labelsBatch.argsort().cuda()
     for i, j in itertools.combinations(list(range(len(labelsBatch[0]))),2):
-        loss_fn = MarginRankingLoss(margin=0.1*abs(i-j)).cuda()
         trueComparison = torch.where(labelsBatch[:,i]>labelsBatch[:,j], torch.tensor(1).cuda(), torch.tensor(-1).cuda()).cuda()
-        lossTensor += abs(i-j)*loss_fn(scoresBatch[:,i], scoresBatch[:,j], trueComparison)
+        for item in range(len(scoresBatch)):
+            loss_fn = MarginRankingLoss(margin=abs(sortedArgs[item,i]-sortedArgs[item,j]) *0.1).cuda()
+            lossTensor += abs(sortedArgs[item,i]-sortedArgs[item,j]) * loss_fn(scoresBatch[item,i].reshape(1), scoresBatch[item,j].reshape(1), trueComparison[item].reshape(1))
     return lossTensor
 
 def cleanup():
@@ -86,8 +89,8 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
     '''
     Function used to train networks
     '''
-    train_sampler = DistributedSampler(trainset)
-    val_sampler = DistributedSampler(valset)
+    train_sampler = DistributedSampler(trainset, seed=time.time_ns())
+    val_sampler = DistributedSampler(valset, seed=time.time_ns())
     
     train_loader = torch.utils.data.DataLoader(dataset=trainset, sampler=train_sampler, batch_size=batchSize, collate_fn=my_collate)
     val_loader = torch.utils.data.DataLoader(dataset=valset, sampler=val_sampler, batch_size=batchSize, collate_fn=my_collate)
@@ -102,7 +105,6 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         torch.enable_grad()
 
         for (i, ((tokenSets, backwards_edge, problemTypes), labels)) in enumerate(tqdm.tqdm(train_loader)):
-            dist.barrier()
             lossTensor = torch.FloatTensor([0]).cuda()
             for item in range(len(tokenSets)):
                 tokenSets[item] = tokenSets[item].cuda()
