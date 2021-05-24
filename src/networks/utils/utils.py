@@ -1,3 +1,4 @@
+from operator import pos
 from torch.utils.data import Dataset
 from torch.nn import MarginRankingLoss
 import torch
@@ -180,6 +181,9 @@ def evaluate(model, test_set):
     bestPredicts = 0
     correctPredicts = 0
     possibleCorrect = 0
+    topKCorrect = 0
+
+    predicted = [0,0,0,0,0,0,0,0,0,0]
 
     model.eval()
 
@@ -200,14 +204,21 @@ def evaluate(model, test_set):
 
         bestPredicts += (scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
 
+        for idx in scores.argmax(dim=1):
+            predicted[idx.item()]+=1
+
         maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
         gather = labels.gather(1, maxScoresIdx)
         correctPredicts+=(gather>0).sum().item()
+
+        topKIndexes = torch.topk(scores, 3)[1]
+        gather = labels.gather(1, topKIndexes)
+        topKCorrect+=((gather>0).sum()>0).sum().item()
         
         if labels.max() > 0:
             possibleCorrect+=1
 
-    return [corr_sum/i, bestPredicts/i, correctPredicts/possibleCorrect]
+    return [corr_sum/i, bestPredicts/i, correctPredicts/possibleCorrect, topKCorrect/possibleCorrect, predicted]
 
 def getCorrectProblemTypes(labels, problemTypes):
     '''
