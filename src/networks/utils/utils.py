@@ -61,12 +61,10 @@ def modified_margin_rank_loss_cuda(scoresBatch, labelsBatch, lossTensor):
     '''
     Cuda version of modified_margin_rank_loss function
     '''
-    sortedArgs = labelsBatch.argsort().cuda()
     for i, j in itertools.combinations(list(range(len(labelsBatch[0]))),2):
+        loss_fn = MarginRankingLoss(margin=0.1*abs(i-j)).cuda()
         trueComparison = torch.where(labelsBatch[:,i]>labelsBatch[:,j], torch.tensor(1).cuda(), torch.tensor(-1).cuda()).cuda()
-        for item in range(len(scoresBatch)):
-            loss_fn = MarginRankingLoss(margin=abs(sortedArgs[item,i]-sortedArgs[item,j]) *0.1).cuda()
-            lossTensor += abs(sortedArgs[item,i]-sortedArgs[item,j]) * loss_fn(scoresBatch[item,i].reshape(1), scoresBatch[item,j].reshape(1), trueComparison[item].reshape(1))
+        lossTensor += abs(i-j)*loss_fn(scoresBatch[:,i], scoresBatch[:,j], trueComparison)
     return lossTensor
 
 def cleanup():
