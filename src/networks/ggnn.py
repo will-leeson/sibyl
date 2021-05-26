@@ -14,7 +14,7 @@ class GGNN(nn.Module):
     Base GGNN class
     This Graph Neural Network includes a GRU to produce new node representations
     '''
-    def __init__(self, passes, numEdgeSets, numHiddenLayers):
+    def __init__(self, passes, numEdgeSets):
         super(GGNN, self).__init__()
         self.passes = passes
         self.gru = nn.GRUCell(150, 150)
@@ -22,9 +22,7 @@ class GGNN(nn.Module):
         for _ in range(numEdgeSets):
            self.edgeNets.append([nn.Linear(150,150).cuda(),nn.Linear(150,150).cuda()])
         self.fc1 = nn.Linear(151, 80)
-        self.hiddenLayers = []
-        for _ in range(numHiddenLayers):
-            self.hiddenLayers.append(nn.Linear(80,80).cuda())
+        self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
 
     def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):
@@ -55,9 +53,8 @@ class GGNN(nn.Module):
         x = torch.cat((x, problemTypeBatch), dim=1)
         x = self.fc1(x)
         x = f.leaky_relu(x)
-        for net in self.hiddenLayers:
-            x = net(x)
-            x = f.leaky_relu(x)
+        x = self.fc2(x)
+        x = f.leaky_relu(x)
         x = self.fcLast(x)
         return x
 
@@ -65,16 +62,14 @@ class GGNN_NoGRU(nn.Module):
     '''
     GGNN without GRU, so more aptly a GNN
     '''
-    def __init__(self, passes, numEdgeSets, numHiddenLayers):
+    def __init__(self, passes, numEdgeSets):
         super(GGNN_NoGRU, self).__init__()
         self.passes = passes
         self.edgeNets = []
         for i in range(numEdgeSets):
            self.edgeNets.append([nn.Linear(150,150).cuda(),nn.Linear(150,150).cuda()])
         self.fc1 = nn.Linear(151, 80)
-        self.hiddenLayers = []
-        for _ in range(numHiddenLayers):
-            self.hiddenLayers.append(nn.Linear(80,80).cuda())
+        self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
 
     def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):
@@ -91,7 +86,7 @@ class GGNN_NoGRU(nn.Module):
                     except:
                         continue #Empty Edge Set
                     counter+=1
-                nodesBatch[i] = nodesBatch[i] + incoming
+                nodesBatch[i] = nodesBatch[i] + incoming*(self.passes-j)/self.passes
         
         for i in range(len(nodesBatch)):
                 nodesBatch[i] = nodesBatch[i].sum(dim=0)
@@ -103,9 +98,8 @@ class GGNN_NoGRU(nn.Module):
         x = torch.cat((x, problemTypeBatch), dim=1)
         x = self.fc1(x)
         x = f.leaky_relu(x)
-        for net in self.hiddenLayers:
-            x = net(x)
-            x = f.leaky_relu(x)
+        x = self.fc2(x)
+        x = f.leaky_relu(x)
         x = self.fcLast(x)
         return x
 
@@ -113,12 +107,11 @@ class GGNN_NoGRU_NoEdgeNets(nn.Module):
     '''
     Base GGNN with GRU or edgenets
     '''
-    def __init__(self, passes, numEdgeSets, numHiddenLayers):
+    def __init__(self, passes, numEdgeSets):
         super(GGNN_NoGRU_NoEdgeNets, self).__init__()
         self.passes = passes
         self.fc1 = nn.Linear(151, 80)
-        for _ in range(numHiddenLayers):
-            self.hiddenLayers.append(nn.Linear(80,80).cuda())
+        self.fc2 = nn.Linear(80,80)
         self.fcLast = nn.Linear(80, 10)
 
     def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):  
@@ -144,8 +137,7 @@ class GGNN_NoGRU_NoEdgeNets(nn.Module):
         x = torch.cat((x, problemTypeBatch), dim=1)
         x = self.fc1(x)
         x = f.leaky_relu(x)
-        for net in self.hiddenLayers:
-            x = net(x)
-            x = f.leaky_relu(x)
+        x = self.fc2(x)
+        x = f.leaky_relu(x)
         x = self.fcLast(x)
         return x
