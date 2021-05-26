@@ -32,10 +32,10 @@ class GGNN(nn.Module):
                 counter = 0
                 for edgeSet in backwards_edgeBatch[i]:
                     try:
-                        y = self.edgeNets[counter][0](nodesBatch[i][edgeSet[:,1]])
+                        y = self.edgeNets[counter][0](nodesBatch[i][backwards_edgeBatch[i][edgeSet][:,1]])
                         y = f.leaky_relu(y)
                         y = self.edgeNets[counter][1](y)
-                        incoming = incoming.index_add(0, edgeSet[:,0], y)
+                        incoming = incoming.index_add(0, backwards_edgeBatch[i][edgeSet][:,0], y)
                     except:
                         continue #Empty Edge Set
                     counter+=1
@@ -79,10 +79,10 @@ class GGNN_NoGRU(nn.Module):
                 counter = 0
                 for edgeSet in backwards_edgeBatch[i]:
                     try:
-                        y = self.edgeNets[counter][0](nodesBatch[i][edgeSet[:,1]])
+                        y = self.edgeNets[counter][0](nodesBatch[i][backwards_edgeBatch[i][edgeSet][:,1]])
                         y = f.leaky_relu(y)
                         y = self.edgeNets[counter][1](y)
-                        incoming = incoming.index_add(0, edgeSet[:,0], y)
+                        incoming = incoming.index_add(0, backwards_edgeBatch[i][edgeSet][:,0], y)
                     except:
                         continue #Empty Edge Set
                     counter+=1
@@ -121,7 +121,7 @@ class GGNN_NoGRU_NoEdgeNets(nn.Module):
                 counter = 0
                 for edgeSet in backwards_edgeBatch[i]:
                     try:
-                        incoming = incoming.index_add(0, edgeSet[:,0], nodesBatch[i][edgeSet[:,1]])
+                        incoming = incoming.index_add(0, backwards_edgeBatch[i][edgeSet][:,0], nodesBatch[i][backwards_edgeBatch[i][edgeSet][:,1]])
                     except:
                         continue #Empty Edge Set
                     counter+=1

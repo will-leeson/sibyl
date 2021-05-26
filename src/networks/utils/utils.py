@@ -220,6 +220,25 @@ def evaluate(model, test_set):
 
     return [corr_sum/i, bestPredicts/i, correctPredicts/possibleCorrect, topKCorrect/possibleCorrect, predicted]
 
+def getRanking(model, test_set):
+    '''
+    Function used to evaluate model on test set
+    '''
+    model.eval()
+
+    test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=1, collate_fn=my_collate)
+    scores = []
+
+    for (i, ((tokenSets, backwards_edge_dicts, problemTypes), labels)) in enumerate(tqdm.tqdm(test_loader)):
+        for item in range(len(tokenSets)):
+            tokenSets[item] = tokenSets[item].cuda()
+        problemTypes = problemTypes.cuda()
+        labels = labels.cuda()
+        with autocast():
+            with torch.no_grad():
+                scores.append(model(tokenSets, backwards_edge_dicts, problemTypes))
+    return scores
+
 def getCorrectProblemTypes(labels, problemTypes):
     '''
     Function used to make sure we are only looking at problem types that we want
