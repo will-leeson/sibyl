@@ -48,6 +48,7 @@ class GGNN(nn.Module):
                 nodesBatch[i] = torch.log(nodesBatch[i])
                 nodesBatch[i][torch.isnan(nodesBatch[i])] = 0
                 nodesBatch[i] = f.relu(nodesBatch[i])
+                nodesBatch[i][nodesBatch[i]==float("inf")] = nodesBatch[i][nodesBatch[i]!=float("inf")].max()
         
         x = torch.stack(nodesBatch)
         x = torch.cat((x, problemTypeBatch), dim=1)
@@ -92,6 +93,7 @@ class GGNN_NoGRU(nn.Module):
                 nodesBatch[i] = torch.log(nodesBatch[i])
                 nodesBatch[i][torch.isnan(nodesBatch[i])] = 0
                 nodesBatch[i] = f.relu(nodesBatch[i])
+                nodesBatch[i][nodesBatch[i]==float("inf")] = nodesBatch[i][nodesBatch[i]!=float("inf")].max()
         
         x = torch.stack(nodesBatch)
         x = torch.cat((x, problemTypeBatch), dim=1)
@@ -131,6 +133,7 @@ class GGNN_NoGRU_NoEdgeNets(nn.Module):
                 nodesBatch[i] = torch.log(nodesBatch[i])
                 nodesBatch[i][torch.isnan(nodesBatch[i])] = 0
                 nodesBatch[i] = f.relu(nodesBatch[i])
+                nodesBatch[i][nodesBatch[i]==float("inf")] = nodesBatch[i][nodesBatch[i]!=float("inf")].max()
         
         x = torch.stack(nodesBatch)
         x = torch.cat((x, problemTypeBatch), dim=1)
