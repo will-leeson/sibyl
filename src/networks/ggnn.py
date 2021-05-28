@@ -32,11 +32,11 @@ class GGNN(nn.Module):
                 counter = 0
                 for edgeSet in backwards_edgeBatch[i]:
                     try:
-                        y = self.edgeNets[counter][0](nodesBatch[i][backwards_edgeBatch[i][edgeSet][:,1]])
+                        y = self.edgeNets[counter][0](nodesBatch[i][edgeSet[:,1]])
                         y = f.leaky_relu(y)
                         y = self.edgeNets[counter][1](y)
-                        incoming = incoming.index_add(0, backwards_edgeBatch[i][edgeSet][:,0], y)
-                    except:
+                        incoming = incoming.index_add(0, edgeSet[:,0].cuda(), y)
+                    except IndexError:
                         continue #Empty Edge Set
                     counter+=1
                 nodesBatch[i] = self.gru(incoming, nodesBatch[i])
@@ -75,19 +75,18 @@ class GGNN_NoGRU(nn.Module):
     def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):
         for j in range(self.passes):
             for i in range(len(nodesBatch)):
-                incoming = torch.zeros_like(nodesBatch[i])
+                incoming = torch.zeros_like(nodesBatch[i]).cuda()
                 counter = 0
                 for edgeSet in backwards_edgeBatch[i]:
                     try:
-                        y = self.edgeNets[counter][0](nodesBatch[i][backwards_edgeBatch[i][edgeSet][:,1]])
+                        y = self.edgeNets[counter][0](nodesBatch[i][edgeSet[:,1]])
                         y = f.leaky_relu(y)
                         y = self.edgeNets[counter][1](y)
-                        incoming = incoming.index_add(0, backwards_edgeBatch[i][edgeSet][:,0], y)
-                    except:
-                        continue #Empty Edge Set
+                        incoming = incoming.index_add(0, edgeSet[:,0].cuda(), y)
+                    except IndexError:
+                        pass #Empty Edge Set
                     counter+=1
                 nodesBatch[i] = nodesBatch[i] + incoming*(self.passes-j)/self.passes
-        
         for i in range(len(nodesBatch)):
                 nodesBatch[i] = nodesBatch[i].sum(dim=0)
                 nodesBatch[i] = torch.log(nodesBatch[i])
@@ -121,8 +120,8 @@ class GGNN_NoGRU_NoEdgeNets(nn.Module):
                 counter = 0
                 for edgeSet in backwards_edgeBatch[i]:
                     try:
-                        incoming = incoming.index_add(0, backwards_edgeBatch[i][edgeSet][:,0], nodesBatch[i][backwards_edgeBatch[i][edgeSet][:,1]])
-                    except:
+                        incoming = incoming.index_add(0, edgeSet[:,0].cuda(), nodesBatch[i][edgeSet][:,1])
+                    except IndexError:
                         continue #Empty Edge Set
                     counter+=1
                 nodesBatch[i] = nodesBatch[i] + incoming
