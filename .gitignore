@@ -1,0 +1,6 @@
+**/*.zip
+data/sv-results/**
+data/sv-comp/**
+data/sv-benchmarks/**
+paperSummaries
+qualsIdea
