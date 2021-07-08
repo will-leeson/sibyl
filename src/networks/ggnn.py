@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as f
+import time
 
 '''
 File - ggnn.py
@@ -17,7 +18,7 @@ class GGNN(nn.Module):
     def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize):
         super(GGNN, self).__init__()
         self.passes = passes
-        self.gru = nn.GRUCell(150, 150)
+        self.gru = nn.GRUCell(inputLayerSize, inputLayerSize)
         self.edgeNets = []
         for _ in range(numEdgeSets):
            self.edgeNets.append([nn.Linear(inputLayerSize,inputLayerSize).cuda(),nn.Linear(inputLayerSize,inputLayerSize).cuda()])
@@ -44,11 +45,11 @@ class GGNN(nn.Module):
                     nodesBatch[i] = nodesBatch[i].detach()
         
         for i in range(len(nodesBatch)):
-                nodesBatch[i] = nodesBatch[i].sum(dim=0)
-                nodesBatch[i] = torch.log(nodesBatch[i])
-                nodesBatch[i][torch.isnan(nodesBatch[i])] = 0
-                nodesBatch[i] = f.relu(nodesBatch[i])
-                nodesBatch[i][nodesBatch[i]==float("inf")] = nodesBatch[i][nodesBatch[i]!=float("inf")].max()
+            nodesBatch[i] = nodesBatch[i].sum(dim=0)
+            nodesBatch[i] = torch.log(nodesBatch[i])
+            nodesBatch[i][torch.isnan(nodesBatch[i])] = 0
+            nodesBatch[i] = f.relu(nodesBatch[i])
+            nodesBatch[i][nodesBatch[i]==float("inf")] = nodesBatch[i][nodesBatch[i]!=float("inf")].max()
         
         x = torch.stack(nodesBatch)
         x = torch.cat((x, problemTypeBatch), dim=1)
@@ -135,6 +136,52 @@ class GGNN_NoGRU_NoEdgeNets(nn.Module):
                 nodesBatch[i] = f.relu(nodesBatch[i])
                 nodesBatch[i][nodesBatch[i]==float("inf")] = nodesBatch[i][nodesBatch[i]!=float("inf")].max()
         
+        x = torch.stack(nodesBatch)
+        x = torch.cat((x, problemTypeBatch), dim=1)
+        x = self.fc1(x)
+        x = f.leaky_relu(x)
+        x = self.fc2(x)
+        x = f.leaky_relu(x)
+        x = self.fcLast(x)
+        return x
+
+class GAT(nn.Module):
+    def __init__(self, passes, numEdgeSets, numAttentionLayers, inputLayerSize, outputLayerSize):
+        super(GAT, self).__init__()
+        self.passes = passes
+        self.weight_matrices = nn.parameter.Parameter(data=torch.randn(numEdgeSets,inputLayerSize, inputLayerSize))
+        self.attentionLayers = [nn.Linear(inputLayerSize*2, 1).cuda() for _ in range(numAttentionLayers)]
+        self.fc1 = nn.Linear(inputLayerSize+1, 80)
+        self.fc2 = nn.Linear(80,80)
+        self.fcLast = nn.Linear(80, outputLayerSize)
+
+    def forward(self, nodesBatch, backwards_edgeBatch, problemTypeBatch):
+        for j in range(self.passes):
+            for i in range(len(nodesBatch)):
+                hPrime = torch.zeros_like(nodesBatch[i])
+                for edgeSet, weightMatrix in zip(backwards_edgeBatch[i],self.weight_matrices):
+                    hPrime2 = torch.zeros_like(nodesBatch[i]).cuda()
+                    try:
+                        for attentionLayer in self.attentionLayers:
+                            h_i = torch.matmul(nodesBatch[i][edgeSet[:,0]], weightMatrix)
+                            h_j = torch.matmul(nodesBatch[i][edgeSet[:,1]], weightMatrix)
+                            e_ij = f.leaky_relu(attentionLayer(torch.cat((h_i,h_j),dim=1)))
+                            a_ij = torch.zeros_like(e_ij)
+                            for val in torch.unique(edgeSet[:,1]):
+                                if (edgeSet[:,1]==val).sum() == 1:
+                                    a_ij[edgeSet[:,1]==val] = 1
+                                else:   
+                                    a_ij[edgeSet[:,1]==val]  =  f.softmax(e_ij[edgeSet[:,1]==val], dim=0).half()
+                            # a = list(map(lambda x: f.softmax(e_ij[edgeSet[:,1] == x], dim=0), range(len(nodesBatch[i]))))
+                            hPrime2 = hPrime2.index_add(0, edgeSet[:,0].cuda(), a_ij*h_j)
+                        hPrime2/=len(self.attentionLayers)
+                        hPrime += hPrime
+                    except IndexError:
+                        continue
+                nodesBatch[i] = hPrime
+
+        nodesBatch = [batch.mean(dim=0) for batch in nodesBatch]
+
         x = torch.stack(nodesBatch)
         x = torch.cat((x, problemTypeBatch), dim=1)
         x = self.fc1(x)
