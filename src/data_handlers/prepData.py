@@ -31,7 +31,7 @@ def makeFinalRep(graph):
         else:
             tokenToNum[token] = counter
             counter+=1
-        aList = np.array([0]*150)
+        aList = np.array([0]*len(tokenDict))
         aList[tokenDict[graphDict["tokens"][token]]] = 1
         nodeRepresentations.append(aList)
     

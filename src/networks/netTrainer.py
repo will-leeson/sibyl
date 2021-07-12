@@ -1,4 +1,4 @@
-from ggnn import GGNN, GGNN_NoGRU, GGNN_NoGRU_NoEdgeNets
+from ggnn import GGNN, GGNN_NoGRU, GGNN_NoGRU_NoEdgeNets, GAT
 from utils.utils import GraphDataset, modified_margin_rank_loss_cuda, cleanup, train_model, getCorrectProblemTypes, evaluate
 import torch, json, datetime, argparse
 import torch.nn as nn
@@ -19,7 +19,7 @@ if __name__ == '__main__':
 	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "CFG"], choices=['AST', 'DFG', "CFG"])
 	parser.add_argument("-p", "--problem-types", help="Which problem types to consider:termination, overflow, reachSafety, memSafety (Default=All)", nargs="+", default=['termination', 'overflow', 'reachSafety', 'memSafety'], choices=['termination', 'overflow', 'reachSafety', 'memSafety'])
 	parser.add_argument('--local_rank', type=int, default=-1, metavar='N', help='Local process rank.')
-	parser.add_argument('--architecture', help="0=Base GGNN, 1=GGNN w/o GRU, 2=GGNN w/o GRU, w/o edge nets", type=int, default=0, choices=[0,1,2])
+	parser.add_argument('--architecture', help="0=Base GGNN, 1=GGNN w/o GRU, 2=GGNN w/o GRU, w/o edge nets, 3=GAT", type=int, default=0, choices=[0,1,2,3])
 	parser.add_argument("--hidden-layers", help="Number of hidden layers", type=int, default=1)
 
 	args = parser.parse_args()
@@ -50,8 +50,12 @@ if __name__ == '__main__':
 	elif args.architecture == 1:
 		model = GGNN_NoGRU(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1])).to(device=torch.cuda.current_device())
 		modelType = "GGNNNoGRU"
-	else:
+	elif args.architecture == 2:
 		model = GGNN_NoGRU_NoEdgeNets(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1])).to(device=torch.cuda.current_device())
+		modelType = "GGNNNoGRUNoEdgeNet"
+	else:
+		#ef __init__(self, passes, numEdgeSets, numAttentionLayers, inputLayerSize, outputLayerSize):
+		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=3, inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1])).to(device=torch.cuda.current_device())
 		modelType = "GGNNNoGRUNoEdgeNet"
 
 	ddp_model = nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank)
