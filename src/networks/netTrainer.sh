@@ -10,4 +10,4 @@ python3 -m torch.distributed.launch \
     --nnodes=$NUM_NODES \
     --node_rank $NODE_RANK \
     --master_port=$5 \
-    netTrainer.py -t $1 -e $2 --architecture $3 -p memSafety --edge-sets CFG DFG
+    netTrainer.py -t $1 -e $2 --architecture $3 -p termination --edge-sets $6
