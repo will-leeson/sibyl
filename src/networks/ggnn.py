@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as f
-import time
 
 '''
 File - ggnn.py
@@ -160,7 +159,6 @@ class GAT(nn.Module):
             for i in range(len(nodesBatch)):
                 hPrime = torch.zeros_like(nodesBatch[i])
                 for edgeSet, weightMatrix in zip(backwards_edgeBatch[i],self.weight_matrices):
-                    hPrime2 = torch.zeros_like(nodesBatch[i]).cuda()
                     try:
                         for attentionLayer in self.attentionLayers:
                             h_i = torch.matmul(nodesBatch[i][edgeSet[:,0]], weightMatrix)
@@ -168,14 +166,13 @@ class GAT(nn.Module):
                             e_ij = f.leaky_relu(attentionLayer(torch.cat((h_i,h_j),dim=1)))
                             a_ij = torch.zeros_like(e_ij)
                             for val in torch.unique(edgeSet[:,1]):
-                                if (edgeSet[:,1]==val).sum() == 1:
-                                    a_ij[edgeSet[:,1]==val] = 1
-                                else:   
-                                    a_ij[edgeSet[:,1]==val]  =  f.softmax(e_ij[edgeSet[:,1]==val], dim=0).half()
-                            # a = list(map(lambda x: f.softmax(e_ij[edgeSet[:,1] == x], dim=0), range(len(nodesBatch[i]))))
-                            hPrime2 = hPrime2.index_add(0, edgeSet[:,0].cuda(), a_ij*h_j)
-                        hPrime2/=len(self.attentionLayers)
-                        hPrime += hPrime
+                                indx = (edgeSet[:,1]==val).nonzero()
+                                if indx.size(0)==1:
+                                    a_ij[indx[0]] = 1
+                                else:
+                                    a_ij[indx[0]:indx[-1]] = f.softmax(e_ij[indx[0]:indx[-1]], dim=0)
+                            hPrime = hPrime.index_add(0, edgeSet[:,0].cuda(), a_ij*h_j)
+                        hPrime/=len(self.attentionLayers)
                     except IndexError:
                         continue
                 nodesBatch[i] = hPrime
