@@ -56,7 +56,7 @@ if __name__ == '__main__':
 	else:
 		#ef __init__(self, passes, numEdgeSets, numAttentionLayers, inputLayerSize, outputLayerSize):
 		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=3, inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1])).to(device=torch.cuda.current_device())
-		modelType = "GGNNNoGRUNoEdgeNet"
+		modelType = "GAT"
 
 	ddp_model = nn.parallel.DistributedDataParallel(model, device_ids=[rank], output_device=rank)
 
@@ -67,8 +67,8 @@ if __name__ == '__main__':
 	train_acc, train_loss, val_acc, val_loss = report
 	if args.local_rank == 0:
 		test_data = evaluate(model, test_set)
-		np.savez_compressed(modelType+str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss, test_data)
-		torch.save(model.state_dict(), modelType+str(args.time_steps)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".pt")
+		np.savez_compressed(modelType+str(args.time_steps)+str(args.problem_types)+str(args.edge_sets)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss, test_data)
+		torch.save(model.state_dict(), modelType+str(args.time_steps)+str(args.problem_types)+str(args.edge_sets)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".pt")
 	
 	dist.barrier()
 
