@@ -1,6 +1,8 @@
 from operator import pos
 from numpy.core.fromnumeric import sort
 from torch.utils.data import Dataset
+from torch_geometric.data import Dataset as GDataset
+from torch_geometric.data import Data
 from torch.nn import MarginRankingLoss
 import torch
 import os, itertools, tqdm, time
@@ -42,8 +44,35 @@ class GraphDataset(Dataset):
 
         return (tokens, edges_tensor, problemType), label
 
+class GeometricDataset(GDataset):
+    def __init__(self, labels, data_dir, edge_sets):
+        self.labels = labels
+        self.data_dir = data_dir
+        self.edge_sets = edge_sets
+    
+    def __len__(self):
+        return len(self.labels)
 
-def modified_margin_rank_loss(scoresBatch, labelsBatch, lossTensor):
+    def __getitem__(self, idx):
+        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npz")
+        edges = np.load(os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+"Edges.npz"))
+
+        edges_tensor = [torch.from_numpy(edges[edgeSet]) for edgeSet in self.edge_sets]
+
+        edge_labels = torch.cat([torch.full((len(edges_tensor[i]),1),i) for i in range(len(edges_tensor))])        
+        edges_tensor = torch.cat(edges_tensor).transpose(0,1)
+
+        data = np.load(path)
+        tokens = torch.from_numpy(data['node_rep'])
+
+        label = torch.tensor(self.labels[idx][1])
+        problemType = torch.tensor([float(self.labels[idx][0].split("|||")[1])])
+
+        return (Data(x=tokens.float(), edge_index=edges_tensor, edge_attr=edge_labels), problemType), label
+
+
+
+def modified_margin_rank_loss(scoresBatch, labelsBatch):
     '''
     This function defines my loss function
     For each combination of comparison between verifiers, get the loss for
@@ -52,6 +81,7 @@ def modified_margin_rank_loss(scoresBatch, labelsBatch, lossTensor):
     rank 3 than rank 2.
     '''
     loss_fn = MarginRankingLoss(margin=0.1)
+    lossTensor = torch.zeros(1)
     for i, j in itertools.combinations(list(range(len(labelsBatch[0]))),2):
         trueComparison = torch.where(labelsBatch[:,i]>labelsBatch[:,j], 1, -1)
         lossTensor += abs(i-j)*loss_fn(scoresBatch[:,i], scoresBatch[:,j], trueComparison)
@@ -87,8 +117,8 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
     '''
     Function used to train networks
     '''
-    train_sampler = DistributedSampler(trainset, seed=time.time_ns())
-    val_sampler = DistributedSampler(valset, seed=time.time_ns())
+    train_sampler = DistributedSampler(trainset, seed=int(time.time()))
+    val_sampler = DistributedSampler(valset, seed=int(time.time()))
     
     train_loader = torch.utils.data.DataLoader(dataset=trainset, sampler=train_sampler, batch_size=batchSize, collate_fn=my_collate)
     val_loader = torch.utils.data.DataLoader(dataset=valset, sampler=val_sampler, batch_size=batchSize, collate_fn=my_collate)
