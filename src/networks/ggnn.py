@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as f
+from torch_geometric.nn import GATv2Conv
 
 '''
 File - ggnn.py
@@ -186,4 +187,30 @@ class GAT(nn.Module):
         x = self.fc2(x)
         x = f.leaky_relu(x)
         x = self.fcLast(x)
+        return x
+
+class GATv2(torch.nn.Module):
+    def __init__(self, passes, inputLayerSize, outputLayerSize):
+        super(GATv2, self).__init__()
+        self.gat = GATv2Conv(inputLayerSize,inputLayerSize, heads=3, concat=False)
+        self.passes = passes
+        self.fc1 = nn.Linear(inputLayerSize+1, 80)
+        self.fc2 = nn.Linear(80,80)
+        self.fcLast = nn.Linear(80, outputLayerSize)
+    
+    def forward(self, data, problemType):
+        x, edge_index = data.x, data.edge_index
+        
+        for i in range(self.passes): 
+            x = self.gat(x, edge_index)
+
+        x = torch.mean(x, dim=0)
+        x = torch.cat((x, problemType), dim=0)
+
+        x = self.fc1(x)
+        x = f.leaky_relu(x)
+        x = self.fc2(x)
+        x = f.leaky_relu(x)
+        x = self.fcLast(x)
+
         return x
