@@ -24,7 +24,7 @@ train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", ['AST', 'D
 val_set = GeometricDataset(valLabels, "../../data/final_graphs/", ['AST', 'DFG', 'CFG'])
 test_set = GeometricDataset(testLabels, "../../data/final_graphs/", ['AST', 'DFG', 'CFG'])
 
-model = GATv2(int(sys.argv[1]), train_set[0][0][0].x.size(1), 10)
+model = GATv2(int(sys.argv[1]), train_set[0][0][0].x.size(1), 10).cuda()
 
 optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
@@ -39,11 +39,11 @@ for epoch in range(0, 25):
 
     counter = 0
     for (data, problemtype), label in tqdm.tqdm(train_set): 
-        scores = model(data, problemtype)
+        scores = model(data.cuda(), problemtype.cuda())
         loss_fn = nn.MarginRankingLoss(margin=0.1)
-        lossTensor = torch.zeros(1)
+        lossTensor = torch.zeros(1).cuda()
         for i, j in itertools.combinations(list(range(len(label))),2):
-            trueComparison = torch.where(label[i]>label[j], 1, -1)
+            trueComparison = torch.where(label[i]>label[j], 1, -1).cuda()
             lossTensor += abs(i-j)*loss_fn(scores[i].view(1,1), scores[j].view(1,1), trueComparison.view(1,1))
 
         cum_loss+=lossTensor.item()
