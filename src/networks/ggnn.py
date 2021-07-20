@@ -166,7 +166,10 @@ class GAT(nn.Module):
                             e_ij = f.leaky_relu(attentionLayer(torch.cat((h_i,h_j),dim=1)))
                             a_ij = torch.zeros_like(e_ij)
                             for val in torch.unique(edgeSet[:,1]):
-                                indx = (edgeSet[:,1]==val).nonzero()
+                                indx = (edgeSet[:,1]==val)
+                                print(indx)
+                                print(indx.nonzero())
+                                assert()
                                 if indx.size(0)==1:
                                     a_ij[indx[0]] = 1
                                 else:
