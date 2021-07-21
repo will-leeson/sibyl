@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as f
-from torch_geometric.nn import GATv2Conv
+from torch_geometric.nn import GATv2Conv, GATConv
 from torch_scatter import scatter_mean
 
 '''
@@ -217,5 +217,5 @@ class GATv2(torch.nn.Module):
         x = self.fc2(x)
         x = f.leaky_relu(x)
         x = self.fcLast(x)
-        
+
         return x
