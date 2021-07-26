@@ -110,7 +110,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             optimizer.step()
 
             if (i+1)%25==0 or (i+1)==len(train_loader):
-                mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/i, 4)) + ", Avg-Corr:" +  str(round(corr_sum/i, 4))
+                mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i*batchSize), 4)) + ", Avg-Corr:" +  str(round(corr_sum/(i*batchSize), 4))
                 print(mystr)
                 train_accuracies.append(round(corr_sum/i, 4))
                 train_losses.append(round(cum_loss/i, 4))
@@ -142,7 +142,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         val_accuracies.append(round(corr_sum/i, 4))
         val_losses.append(round(cum_loss/i, 4))
 
-        mystr = "Valid-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/i, 4)) + ", Avg-Corr:" +  str(round(corr_sum/i, 4))
+        mystr = "Valid-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i*batchSize), 4)) + ", Avg-Corr:" +  str(round(corr_sum/(i*batchSize), 4))
         print(mystr)
         if optimizer.param_groups[0]['lr']<1e-7:
             break
