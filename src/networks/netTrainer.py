@@ -1,5 +1,6 @@
-from ggnn import GGNN, GGNN_NoGRU, GGNN_NoGRU_NoEdgeNets, GAT, GATv2
-from utils.utils import GraphDataset, modified_margin_rank_loss_cuda, cleanup, train_model, getCorrectProblemTypes, evaluate, GeometricDataset
+from torch._C import StringType
+from ggnn import GGNN, GATv2
+from utils.utils import modified_margin_rank_loss_cuda, train_model, getCorrectProblemTypes, evaluate, GeometricDataset
 import torch, json, datetime, argparse
 import torch.nn as nn
 import torch.optim as optim
@@ -18,8 +19,9 @@ if __name__ == '__main__':
 	parser.add_argument("-e", "--epochs", help="Number of training epochs (Default=20)", default=20, type=int)
 	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "CFG"], choices=['AST', 'DFG', "CFG"])
 	parser.add_argument("-p", "--problem-types", help="Which problem types to consider:termination, overflow, reachSafety, memSafety (Default=All)", nargs="+", default=['termination', 'overflow', 'reachSafety', 'memSafety'], choices=['termination', 'overflow', 'reachSafety', 'memSafety'])
-	parser.add_argument('--architecture', help="0=Base GGNN, 1=GGNN w/o GRU, 2=GGNN w/o GRU, w/o edge nets, 3=GAT", type=int, default=0, choices=[0,1,2,3])
+	parser.add_argument('--architecture', help="GGNN, GAT", default="GGNN", choices=["GGNN","GAT"])
 	parser.add_argument("--hidden-layers", help="Number of hidden layers", type=int, default=1)
+	parser.add_argument("-c", "--collate", help="Collation Function (Default Sum): max, mean, sum", default="sum", choices=['max', 'mean', 'sum'])
 
 	args = parser.parse_args()
 
@@ -35,36 +37,20 @@ if __name__ == '__main__':
 	testLabels = [(key, [item[1] for item in testFiles[key]]) for key in testFiles]
 	testLabels = getCorrectProblemTypes(testLabels, args.problem_types)
 
-	if args.architecture <3:
-		train_set = GraphDataset(trainLabels, "../../data/final_graphs/", args.edge_sets)
-		val_set = GraphDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
-		test_set = GraphDataset(testLabels, "../../data/final_graphs/", args.edge_sets)
-	else:
-		train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", args.edge_sets)
-		val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
-		test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets)
+	train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", args.edge_sets)
+	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
+	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets)
 
-	modelType = None
-	default_collate=True
 	if args.architecture == 0:
-		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1])).to(device=torch.cuda.current_device())
-		modelType = "GGNN"
-	elif args.architecture == 1:
-		model = GGNN_NoGRU(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1])).to(device=torch.cuda.current_device())
-		modelType = "GGNNNoGRU"
-	elif args.architecture == 2:
-		model = GGNN_NoGRU_NoEdgeNets(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1])).to(device=torch.cuda.current_device())
-		modelType = "GGNNNoGRUNoEdgeNet"
+		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1]), collate=args.collate).to(device=torch.cuda.current_device())
 	else:
-		model = GATv2(passes=args.time_steps, numAttentionLayers=3, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1])).to(device=torch.cuda.current_device())
-		modelType = "GAT"
-		default_collate=False
+		model = GATv2(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=3, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), collate=args.collate).to(device=torch.cuda.current_device())
 
 	loss_fn = modified_margin_rank_loss_cuda
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
-	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, default_collate=default_collate)
+	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
 	train_acc, train_loss, val_acc, val_loss = report
-	test_data = evaluate(model, test_set, default_collate=default_collate)
-	np.savez_compressed(modelType+str(args.time_steps)+str(args.problem_types)+str(args.edge_sets)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss, test_data)
-	torch.save(model.state_dict(), modelType+str(args.time_steps)+str(args.problem_types)+str(args.edge_sets)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".pt")
+	test_data = evaluate(model, test_set)
+	np.savez_compressed(args.architecture+"_"+args.collate+"_"+str(args.time_steps)+str(args.problem_types)+str(args.edge_sets)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss, test_data)
+	torch.save(model.state_dict(), args.architecture+"_"+args.collate+"_"+str(args.time_steps)+str(args.problem_types)+str(args.edge_sets)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".pt")

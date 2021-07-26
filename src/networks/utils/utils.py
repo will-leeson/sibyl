@@ -19,32 +19,6 @@ File - utils.py
 This file defines some utility functions
 '''
 
-class GraphDataset(Dataset):
-    '''
-    This class defines the Dataset for graphs types
-    '''
-    def __init__(self, labels, data_dir, edge_sets):
-        self.labels = labels
-        self.data_dir = data_dir
-        self.edge_sets=edge_sets
-    
-    def __len__(self):
-        return len(self.labels)
-    
-    def __getitem__(self, idx):
-        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npz")
-        backwards_edges = np.load(os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+"Edges.npz"))
-
-        edges_tensor = [torch.from_numpy(backwards_edges[edgeSet]) for edgeSet in self.edge_sets]
-        
-        label = self.labels[idx][1]
-        problemType = torch.tensor([float(self.labels[idx][0].split("|||")[1])]).half()
-        
-        data = np.load(path)
-        tokens = torch.from_numpy(data['node_rep']).half()
-
-        return (tokens, edges_tensor, problemType), label
-
 class GeometricDataset(GDataset):
     def __init__(self, labels, data_dir, edge_sets):
         self.labels = labels
@@ -61,7 +35,7 @@ class GeometricDataset(GDataset):
         edges_tensor = [torch.from_numpy(edges[edgeSet]) for edgeSet in self.edge_sets]
 
         edge_labels = torch.cat([torch.full((len(edges_tensor[i]),1),i) for i in range(len(edges_tensor))], dim=0)        
-        edges_tensor = torch.cat(edges_tensor).transpose(0,1)
+        edges_tensor = torch.cat(edges_tensor).transpose(0,1).long()
 
         data = np.load(path)
         tokens = torch.from_numpy(data['node_rep'])
@@ -98,33 +72,13 @@ def modified_margin_rank_loss_cuda(scoresBatch, labelsBatch, lossTensor):
         lossTensor += abs(i-j)*loss_fn(scoresBatch[:,i], scoresBatch[:,j], trueComparison)
     return lossTensor
 
-def cleanup():
-    dist.destroy_process_group()
-
-def my_collate(batch):
-    """
-    batch: a batch
-    This is my collate function. There are many like it, but this one is mine
-    """
-    tokens = [item[0][0] for item in batch]
-    backwards_edges = [item[0][1] for item in batch]
-    problemType = torch.stack([item[0][2] for item in batch])
-    labels = [torch.tensor(item[1]) for item in batch]
-    labels = torch.stack(labels)
-
-    return (((tokens), backwards_edges, problemType), labels)
-
-def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs, default_collate=True):
+def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs):
     '''
     Function used to train networks
     '''
 
-    if default_collate:
-        train_loader = torch.utils.data.DataLoader(dataset=trainset, shuffle=True, batch_size=batchSize, collate_fn=my_collate)
-        val_loader = torch.utils.data.DataLoader(dataset=valset, shuffle=True, batch_size=batchSize, collate_fn=my_collate)
-    else:
-        train_loader = torch_geometric.data.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True)
-        val_loader = torch_geometric.data.DataLoader(dataset=valset, batch_size=batchSize, shuffle=True)
+    train_loader = torch_geometric.data.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True)
+    val_loader = torch_geometric.data.DataLoader(dataset=valset, batch_size=batchSize, shuffle=True)
 
     train_accuracies = []; val_accuracies = []
     train_losses = []; val_losses = []
@@ -134,7 +88,6 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         cum_loss = 0.0
         model.train()
         torch.enable_grad()
-
         for (i, ((graphs, problemTypes), labels)) in enumerate(tqdm.tqdm(train_loader)):
             lossTensor = torch.FloatTensor([0]).cuda()
             graphs = graphs.cuda()
@@ -196,7 +149,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
     
     return train_accuracies, train_losses, val_accuracies, val_losses
 
-def evaluate(model, test_set, default_collate):
+def evaluate(model, test_set):
     '''
     Function used to evaluate model on test set
     '''
@@ -211,10 +164,7 @@ def evaluate(model, test_set, default_collate):
 
     model.eval()
 
-    if default_collate:
-        test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=1, collate_fn=my_collate)
-    else:
-        test_loader = torch_geometric.data.DataLoader(dataset=test_set, batch_size=1)
+    test_loader = torch_geometric.data.DataLoader(dataset=test_set, batch_size=1)
 
     for (i, ((graphs, problemTypes), labels)) in enumerate(tqdm.tqdm(test_loader)):
         graphs = graphs.cuda()
@@ -245,25 +195,6 @@ def evaluate(model, test_set, default_collate):
             possibleCorrect+=1
     #return [scores, time.time()-startTime]
     return [corr_sum/i, bestPredicts/i, correctPredicts/possibleCorrect, topKCorrect/possibleCorrect, predicted, time.time()-startTime]
-
-def getRanking(model, test_set):
-    '''
-    Function used to evaluate model on test set
-    '''
-    model.eval()
-
-    test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=1, collate_fn=my_collate)
-    scores = []
-
-    for (i, ((tokenSets, backwards_edge_dicts, problemTypes), labels)) in enumerate(tqdm.tqdm(test_loader)):
-        for item in range(len(tokenSets)):
-            tokenSets[item] = tokenSets[item].cuda()
-        problemTypes = problemTypes.cuda()
-        labels = labels.cuda()
-        with autocast():
-            with torch.no_grad():
-                scores.append(model(tokenSets, backwards_edge_dicts, problemTypes))
-    return scores
 
 def getCorrectProblemTypes(labels, problemTypes):
     '''
