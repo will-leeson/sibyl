@@ -1,6 +1,6 @@
 from torch._C import StringType
 from ggnn import GGNN, GATv2
-from utils.utils import modified_margin_rank_loss_cuda, train_model, getCorrectProblemTypes, evaluate, GeometricDataset
+from utils.utils import ModifiedMarginRankingLoss, train_model, getCorrectProblemTypes, evaluate, GeometricDataset
 import torch, json, datetime, argparse
 import torch.nn as nn
 import torch.optim as optim
@@ -46,10 +46,10 @@ if __name__ == '__main__':
 	else:
 		model = GATv2(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=3, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), collate=args.collate).to(device=torch.cuda.current_device())
 
-	loss_fn = modified_margin_rank_loss_cuda
+	loss_fn = ModifiedMarginRankingLoss(margin=0.1).cuda()
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
-	report = train_model(model=model, loss_fn = loss_fn, batchSize=3, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
+	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
 	train_acc, train_loss, val_acc, val_loss = report
 	test_data = evaluate(model, test_set)
 	np.savez_compressed(args.architecture+"_"+args.collate+"_"+str(args.time_steps)+str(args.problem_types)+str(args.edge_sets)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss, test_data)

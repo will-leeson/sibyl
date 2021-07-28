@@ -68,8 +68,8 @@ class GATv2(torch.nn.Module):
         for _ in range(self.passes): 
             placeholderX = torch.zeros_like(x)
             for val, gat in zip(torch.unique(data.edge_attr), self.gats):
-                placeholderX += gat(x, edge_index.transpose(0,1)[(data.edge_attr==val).squeeze()].transpose(0,1))
-            x = placeholderX/len(torch.unique(data.edge_attr))
+                placeholderX += f.leaky_relu(gat(x, edge_index.transpose(0,1)[(data.edge_attr==val).squeeze()].transpose(0,1)))
+            x = placeholderX/3
 
         if self.collate == "sum":
             x = scatter_sum(x, data.batch, dim=0)

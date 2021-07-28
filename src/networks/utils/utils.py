@@ -1,16 +1,14 @@
 from operator import pos
 from numpy.core.fromnumeric import sort
-from torch.utils.data import Dataset
 import torch_geometric
 from torch_geometric.data import Dataset as GDataset
-from torch_geometric.data import Data, Batch as GBatch
+from torch_geometric.data import Data
 from torch.nn import MarginRankingLoss
 import torch
+import torch.nn as nn
 import os, itertools, tqdm, time
 import numpy as np
 from scipy.stats import spearmanr
-import torch.distributed as dist
-from torch.utils.data.distributed import DistributedSampler
 from torch.distributed import ReduceOp
 from torch.cuda.amp import autocast
 
@@ -46,21 +44,18 @@ class GeometricDataset(GDataset):
         return (Data(x=tokens.float(), edge_index=edges_tensor, edge_attr=edge_labels), problemType), label
 
 
-
-def modified_margin_rank_loss(scoresBatch, labelsBatch):
-    '''
-    This function defines my loss function
-    For each combination of comparison between verifiers, get the loss for
-    the prediction using MarginRankingLoss. We incentivize larger margins 
-    between larger difference in rankings, i.e. rank 1 should be further from 
-    rank 3 than rank 2.
-    '''
-    loss_fn = MarginRankingLoss(margin=0.1)
-    lossTensor = torch.zeros(1)
-    for i, j in itertools.combinations(list(range(len(labelsBatch[0]))),2):
-        trueComparison = torch.where(labelsBatch[:,i]>labelsBatch[:,j], 1, -1)
-        lossTensor += abs(i-j)*loss_fn(scoresBatch[:,i], scoresBatch[:,j], trueComparison)
-    return lossTensor
+class ModifiedMarginRankingLoss(nn.Module):
+    def __init__(self, margin=0):
+        super(ModifiedMarginRankingLoss, self).__init__()
+        self.margin=margin
+    
+    def forward(self, scores, labels):
+        loss = torch.zeros(1).cuda()
+        for i, j in itertools.combinations(list(range(len(labels[0]))),2):
+            loss_fn = MarginRankingLoss(margin=self.margin*abs(i-j))
+            indx = labels.argsort()
+            loss += loss_fn(scores.gather(1, indx[:,i].unsqueeze(1)), scores.gather(1, indx[:,j].unsqueeze(1)), torch.tensor([1 if i > j else -1]*scores.size(0)).cuda())
+        return loss
 
 def modified_margin_rank_loss_cuda(scoresBatch, labelsBatch, lossTensor):
     '''
@@ -89,14 +84,13 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         model.train()
         torch.enable_grad()
         for (i, ((graphs, problemTypes), labels)) in enumerate(tqdm.tqdm(train_loader)):
-            lossTensor = torch.FloatTensor([0]).cuda()
             graphs = graphs.cuda()
             problemTypes = problemTypes.cuda()
             labels = labels.cuda()
 
             with autocast():
                 scores = model(graphs, problemTypes)
-                loss = loss_fn(scores, labels, lossTensor)      
+                loss = loss_fn(scores, labels)      
             cum_loss+=loss.cpu().detach().item()
 
             for j in range(len(labels)):
@@ -114,7 +108,6 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                 print(mystr)
                 train_accuracies.append(round(corr_sum/i, 4))
                 train_losses.append(round(cum_loss/i, 4))
-            del lossTensor
 
         corr_sum = 0.0
         cum_loss = 0.0
@@ -124,17 +117,15 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             graphs = graphs.cuda()
             problemTypes = problemTypes.cuda()
             labels = labels.cuda()
-            lossTensor = torch.FloatTensor([0]).cuda()
             with autocast():
                 with torch.no_grad():
                     scores = model(graphs, problemTypes)
-                    loss =loss_fn(scores, labels, lossTensor)
+                    loss =loss_fn(scores, labels)
                     cum_loss+=loss.cpu().detach().item()
 
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum += corr
-        del lossTensor
 
         scheduler.step(cum_loss/(i+1))
 
