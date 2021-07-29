@@ -55,7 +55,7 @@ class GGNN(nn.Module):
 class GATv2(torch.nn.Module):
     def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize, numAttentionLayers, collate="sum"):
         super(GATv2, self).__init__()
-        self.gats = nn.ModuleList([GATv2Conv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)])
+        self.gats = nn.ModuleList([nn.ModuleList([GATv2Conv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for _ in range(passes)])
         self.passes = passes
         self.fc1 = nn.Linear(inputLayerSize+1, 80)
         self.fc2 = nn.Linear(80,80)
@@ -65,11 +65,11 @@ class GATv2(torch.nn.Module):
     def forward(self, data, problemType):
         x, edge_index = data.x, data.edge_index
         
-        for _ in range(self.passes): 
+        for gat in self.gats: 
             placeholderX = torch.zeros_like(x)
-            for val, gat in zip(torch.unique(data.edge_attr), self.gats):
-                placeholderX += f.leaky_relu(gat(x, edge_index.transpose(0,1)[(data.edge_attr==val).squeeze()].transpose(0,1)))
-            x = placeholderX/3
+            for val, gatA in zip(torch.unique(data.edge_attr), gat):
+                placeholderX += f.leaky_relu(gatA(x, edge_index.transpose(0,1)[(data.edge_attr==val).squeeze()].transpose(0,1)))
+            x = placeholderX/len(torch.unique(data.edge_attr))
 
         if self.collate == "sum":
             x = scatter_sum(x, data.batch, dim=0)
