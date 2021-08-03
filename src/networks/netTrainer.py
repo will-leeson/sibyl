@@ -1,5 +1,5 @@
 from torch._C import StringType
-from ggnn import GGNN, GATv2
+from ggnn import GGNN, GAT
 from utils.utils import ModifiedMarginRankingLoss, train_model, getCorrectProblemTypes, evaluate, GeometricDataset
 import torch, json, datetime, argparse
 import torch.nn as nn
@@ -44,7 +44,7 @@ if __name__ == '__main__':
 	if args.architecture == 0:
 		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1]), collate=args.collate).to(device=torch.cuda.current_device())
 	else:
-		model = GATv2(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=3, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), collate=args.collate).to(device=torch.cuda.current_device())
+		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), collate=args.collate).to(device=torch.cuda.current_device())
 
 	loss_fn = ModifiedMarginRankingLoss(margin=0.1).cuda()
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
