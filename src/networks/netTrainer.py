@@ -21,7 +21,7 @@ if __name__ == '__main__':
 	parser.add_argument("-p", "--problem-types", help="Which problem types to consider:termination, overflow, reachSafety, memSafety (Default=All)", nargs="+", default=['termination', 'overflow', 'reachSafety', 'memSafety'], choices=['termination', 'overflow', 'reachSafety', 'memSafety'])
 	parser.add_argument('--architecture', help="GGNN, GAT", default="GGNN", choices=["GGNN","GAT"])
 	parser.add_argument("--hidden-layers", help="Number of hidden layers", type=int, default=1)
-	parser.add_argument("-c", "--collate", help="Collation Function (Default Sum): max, mean, sum", default="sum", choices=['max', 'mean', 'sum'])
+	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="sum", choices=['max', 'cat', 'lstm'])
 
 	args = parser.parse_args()
 
@@ -42,9 +42,9 @@ if __name__ == '__main__':
 	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets)
 
 	if args.architecture == 0:
-		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1]), collate=args.collate).to(device=torch.cuda.current_device())
+		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=torch.cuda.current_device())
 	else:
-		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), collate=args.collate).to(device=torch.cuda.current_device())
+		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=torch.cuda.current_device())
 
 	loss_fn = ModifiedMarginRankingLoss(margin=0.1).cuda()
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
@@ -52,5 +52,5 @@ if __name__ == '__main__':
 	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
 	train_acc, train_loss, val_acc, val_loss = report
 	test_data = evaluate(model, test_set)
-	np.savez_compressed(args.architecture+"_"+args.collate+"_"+str(args.time_steps)+str(args.problem_types)+str(args.edge_sets)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss, test_data)
-	torch.save(model.state_dict(), args.architecture+"_"+args.collate+"_"+str(args.time_steps)+str(args.problem_types)+str(args.edge_sets)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".pt")
+	np.savez_compressed(args.architecture+"_"+args.mode+"_"+str(args.time_steps)+str(args.problem_types)+str(args.edge_sets)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss, test_data)
+	torch.save(model.state_dict(), args.architecture+"_"+args.mode+"_"+str(args.time_steps)+str(args.problem_types)+str(args.edge_sets)+"_passes_"+str(args.epochs)+"_epochs"+str(datetime.datetime.now())+".pt")

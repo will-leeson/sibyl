@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as f
 from torch_geometric.nn import GATConv, GatedGraphConv, JumpingKnowledge
+from torch_geometric.nn.glob.sort import global_sort_pool
 from torch_geometric.nn.pool.sag_pool import SAGPooling
 from torch_scatter import placeholder, scatter_mean, scatter_sum, scatter_max
 
@@ -57,15 +58,22 @@ class GGNN(nn.Module):
         return x
 
 class GAT(torch.nn.Module):
-    def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize, numAttentionLayers, collate="sum"):
+    def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize, numAttentionLayers, mode):
         super(GAT, self).__init__()
-        self.gats = nn.ModuleList([nn.ModuleList([GATConv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for i in range(passes)])
         self.passes = passes
-        self.fc1 = nn.Linear(inputLayerSize+1, 80)
-        self.fc2 = nn.Linear(80,80)
-        self.fcLast = nn.Linear(80, outputLayerSize)
-        self.collate=collate
-        self.jump = JumpingKnowledge('lstm', channels=inputLayerSize, num_layers=self.passes)
+        self.k = 10
+        self.mode = mode
+
+        self.gats = nn.ModuleList([nn.ModuleList([GATConv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for i in range(passes)])
+        self.jump = JumpingKnowledge(self.mode, channels=inputLayerSize, num_layers=self.passes)
+        if self.mode == 'cat':
+            self.fc1 = nn.Linear(((self.passes+1)*inputLayerSize*self.k)+1, (((self.passes+1)*inputLayerSize*self.k)+1)//2)
+            self.fc2 = nn.Linear((((self.passes+1)*inputLayerSize*self.k)+1)//2,(((self.passes+1)*inputLayerSize*self.k)+1)//2)
+            self.fcLast = nn.Linear((((self.passes+1)*inputLayerSize*self.k)+1)//2, outputLayerSize)
+        else:
+            self.fc1 = nn.Linear((inputLayerSize*self.k)+1, ((inputLayerSize*self.k)+1)//2)
+            self.fc2 = nn.Linear(((inputLayerSize*self.k)+1)//2,((inputLayerSize*self.k)+1)//2)
+            self.fcLast = nn.Linear(((inputLayerSize*self.k)+1)//2, outputLayerSize)
     
     def forward(self, data, problemType):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
@@ -81,15 +89,7 @@ class GAT(torch.nn.Module):
         
         x = self.jump(xs)
 
-        if self.collate == "sum":
-            x = scatter_sum(x, data.batch, dim=0)
-        elif self.collate == "mean":
-            x = scatter_mean(x, data.batch, dim=0)
-        elif self.collate == "max":
-            x, _ = scatter_max(x, data.batch, dim=0)
-        else:
-            raise ValueError("Not a valid collate type")
-
+        x = global_sort_pool(x, data.batch, self.k)
         x = torch.cat((x, problemType), dim=1)
 
         x = self.fc1(x)
