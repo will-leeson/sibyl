@@ -58,10 +58,10 @@ class GGNN(nn.Module):
         return x
 
 class GAT(torch.nn.Module):
-    def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize, numAttentionLayers, mode):
+    def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize, numAttentionLayers, mode, k):
         super(GAT, self).__init__()
         self.passes = passes
-        self.k = 10
+        self.k = k
         self.mode = mode
 
         self.gats = nn.ModuleList([nn.ModuleList([GATConv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for i in range(passes)])
