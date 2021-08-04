@@ -21,7 +21,8 @@ if __name__ == '__main__':
 	parser.add_argument('--architecture', help="GGNN, GAT", default="GGNN", choices=["GGNN","GAT"])
 	parser.add_argument("--hidden-layers", help="Number of hidden layers", type=int, default=1)
 	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="sum", choices=['max', 'cat', 'lstm'])
-	parser.add_argument("-k", "--k-final-nodes", help="Global Sort Pool (Default 10)", default=10, type=int)
+	parser.add_argument("-k", "--k-final-nodes", help="Sort Pool Size (Default 10)", default=10, type=int)
+	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, pool", default="add", choices=["max", "mean","add","pool"])
 
 	args = parser.parse_args()
 
@@ -44,7 +45,7 @@ if __name__ == '__main__':
 	if args.architecture == 0:
 		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=torch.cuda.current_device())
 	else:
-		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=args.k_final_nodes).to(device=torch.cuda.current_device())
+		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=args.k_final_nodes, pool=args.pool_type).to(device=torch.cuda.current_device())
 
 	loss_fn = ModifiedMarginRankingLoss(margin=0.1).cuda()
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)

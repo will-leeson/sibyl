@@ -1,11 +1,11 @@
 from os import error
 import torch
+from torch._C import Value
 import torch.nn as nn
 import torch.nn.functional as f
-from torch_geometric.nn import GATConv, GatedGraphConv, JumpingKnowledge
+from torch_geometric.nn import GATConv, GATv2Conv, GatedGraphConv, JumpingKnowledge
+from torch_geometric.nn.glob.glob import global_max_pool, global_mean_pool, global_add_pool
 from torch_geometric.nn.glob.sort import global_sort_pool
-from torch_geometric.nn.pool.sag_pool import SAGPooling
-from torch_scatter import placeholder, scatter_mean, scatter_sum, scatter_max
 
 '''
 File - ggnn.py
@@ -41,11 +41,11 @@ class GGNN(nn.Module):
 
         x = f.dropout(x, p=0.6, training=self.training)
         if self.collate == "sum":
-            x = scatter_sum(x, data.batch, dim=0)
+            x = global_add_pool(x, data.batch, dim=0)
         elif self.collate == "mean":
-            x = scatter_mean(x, data.batch, dim=0)
+            x = global_mean_pool(x, data.batch, dim=0)
         elif self.collate == "max":
-            x, _ = scatter_max(x, data.batch, dim=0)
+            x, _ = global_max_pool(x, data.batch, dim=0)
         else:
             raise ValueError("Not a valid collate type")
 
@@ -58,13 +58,25 @@ class GGNN(nn.Module):
         return x
 
 class GAT(torch.nn.Module):
-    def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize, numAttentionLayers, mode, k):
+    def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize, numAttentionLayers, mode, pool, k):
         super(GAT, self).__init__()
         self.passes = passes
-        self.k = k
         self.mode = mode
+        self.k = 1
 
-        self.gats = nn.ModuleList([nn.ModuleList([GATConv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for i in range(passes)])
+        if pool == "add":
+            self.pool = global_add_pool
+        elif pool == "mean":
+            self.pool = global_mean_pool
+        elif pool == "max":
+            self.pool = global_max_pool
+        elif pool == "sort":
+            self.pool = global_sort_pool
+            self.k = k
+        else:
+            raise ValueError("Not a valid pool")
+            
+        self.gats = nn.ModuleList([nn.ModuleList([GATv2Conv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for i in range(passes)])
         self.jump = JumpingKnowledge(self.mode, channels=inputLayerSize, num_layers=self.passes)
         if self.mode == 'cat':
             self.fc1 = nn.Linear(((self.passes+1)*inputLayerSize*self.k)+1, (((self.passes+1)*inputLayerSize*self.k)+1)//2)
@@ -89,8 +101,12 @@ class GAT(torch.nn.Module):
         
         x = self.jump(xs)
 
-        x = global_sort_pool(x, data.batch, self.k)
-        x = torch.cat((x, problemType), dim=1)
+        #x = global_sort_pool(x, data.batch, self.k)
+        if self.pool == global_sort_pool:
+            x = self.pool(x, data.batch, self.k)
+        else:
+            x = self.pool(x, data.batch)
+        x = torch.cat((x.reshape(1,x.size(0)*x.size(1)), problemType), dim=1)
 
         x = self.fc1(x)
         x = f.leaky_relu(x)
