@@ -73,6 +73,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         cum_loss = 0.0
         model.train()
         torch.enable_grad()
+
         for (i, ((graphs, problemTypes), labels)) in enumerate(tqdm.tqdm(train_loader)):
             graphs = graphs.cuda()
             problemTypes = problemTypes.cuda()

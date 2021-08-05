@@ -101,7 +101,6 @@ class GAT(torch.nn.Module):
         
         x = self.jump(xs)
 
-        #x = global_sort_pool(x, data.batch, self.k)
         if self.pool == global_sort_pool:
             x = self.pool(x, data.batch, self.k)
         else:

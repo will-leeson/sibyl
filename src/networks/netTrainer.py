@@ -22,21 +22,19 @@ if __name__ == '__main__':
 	parser.add_argument("--hidden-layers", help="Number of hidden layers", type=int, default=1)
 	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="sum", choices=['max', 'cat', 'lstm'])
 	parser.add_argument("-k", "--k-final-nodes", help="Sort Pool Size (Default 10)", default=10, type=int)
-	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, pool", default="add", choices=["max", "mean","add","pool"])
+	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, sort)", default="add", choices=["max", "mean","add","sort"])
 
 	args = parser.parse_args()
-	print(str(args))
-	assert()
 
-	trainFiles = json.load(open("../../data/trainFiles.json"))
+	trainFiles = json.load(open("../../data/subsetTrainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
 	trainLabels = getCorrectProblemTypes(trainLabels, args.problem_types)
 
-	valFiles = json.load(open("../../data/valFiles.json"))
+	valFiles = json.load(open("../../data/subsetValFiles.json"))
 	valLabels = [(key, [item[1] for item in valFiles[key]]) for key in valFiles]
 	valLabels = getCorrectProblemTypes(valLabels, args.problem_types)
 
-	testFiles = json.load(open("../../data/testFiles.json"))
+	testFiles = json.load(open("../../data/subsetTestFiles.json"))
 	testLabels = [(key, [item[1] for item in testFiles[key]]) for key in testFiles]
 	testLabels = getCorrectProblemTypes(testLabels, args.problem_types)
 
