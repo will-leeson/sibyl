@@ -76,8 +76,9 @@ class GAT(torch.nn.Module):
         else:
             raise ValueError("Not a valid pool")
             
-        self.gats = nn.ModuleList([nn.ModuleList([GATv2Conv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for i in range(passes)])
-        self.jump = JumpingKnowledge(self.mode, channels=inputLayerSize, num_layers=self.passes)
+        self.gats = nn.ModuleList([nn.ModuleList([GATConv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for i in range(passes)])
+        if self.passes:
+            self.jump = JumpingKnowledge(self.mode, channels=inputLayerSize, num_layers=self.passes)
         if self.mode == 'cat':
             self.fc1 = nn.Linear(((self.passes+1)*inputLayerSize*self.k)+1, (((self.passes+1)*inputLayerSize*self.k)+1)//2)
             self.fc2 = nn.Linear((((self.passes+1)*inputLayerSize*self.k)+1)//2,(((self.passes+1)*inputLayerSize*self.k)+1)//2)
@@ -90,16 +91,17 @@ class GAT(torch.nn.Module):
     def forward(self, data, problemType):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
-        xs = [x]
+        if self.passes:
+            xs = [x]
 
-        for gat in self.gats: 
-            placeholderX = torch.zeros_like(x)
-            for val, gatA in zip(torch.unique(edge_attr), gat):
-                placeholderX += f.leaky_relu(gatA(x, edge_index.transpose(0,1)[(edge_attr==val).squeeze()].transpose(0,1)))
-            x = placeholderX/len(torch.unique(data.edge_attr))
-            xs += [x]
-        
-        x = self.jump(xs)
+            for gat in self.gats: 
+                placeholderX = torch.zeros_like(x)
+                for val, gatA in zip(torch.unique(edge_attr), gat):
+                    placeholderX += f.leaky_relu(gatA(x, edge_index.transpose(0,1)[(edge_attr==val).squeeze()].transpose(0,1)))
+                x = placeholderX/len(torch.unique(data.edge_attr))
+                xs += [x]
+            
+            x = self.jump(xs)
 
         if self.pool == global_sort_pool:
             x = self.pool(x, data.batch, self.k)
