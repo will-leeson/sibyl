@@ -1,17 +1,33 @@
 import numpy as np
-
+import multiprocessing
 
 import os, json, torch, tqdm, numpy as np
 
 resultFile = json.load(open("../../data/SV-CompResults.json"))
 
 files = [[],[],[],[]]
-for key in tqdm.tqdm(resultFile):
+def handler(key):
     if os.path.isfile("../../data/final_graphs/" + key.split("|||")[0]+".npz"):
         a = np.load("../../data/final_graphs/" + key.split("|||")[0]+".npz")['node_rep']
-        if a.size >40000:
-            files[int(key.split("|||")[1])].append((key, resultFile[key]))
+        if len(a) < 1.25e5:
+            a = int(key.split("|||")[1])
+            b = (key, resultFile[key])
+            return (a, b)
+    return None
 
+total_processors = int(8)
+pool =  multiprocessing.Pool(processes=total_processors)
+
+jobs = []
+for key in resultFile:
+    jobs.append(pool.apply_async(handler, args=([key])))
+
+# Get the results
+results = []
+for job in tqdm.tqdm(jobs):
+    a = job.get()
+    if a is not None:
+        files[a[0]].append(a[1])
 
 trainFiles, valFiles, testFiles = [], [], []
 for i in files:
@@ -26,7 +42,7 @@ testFileDict = dict()
 
 for item in trainFiles:
     trainFileDict[item[0]] = item[1]
-print(len(trainFileDict))
+print("The size of the training file is: {}".format(len(trainFileDict)))
 
 json.dump(trainFileDict, open("../../data/subsetTrainFiles.json",'w'))
 
