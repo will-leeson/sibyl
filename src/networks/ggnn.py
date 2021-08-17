@@ -3,7 +3,8 @@ import torch
 from torch._C import Value
 import torch.nn as nn
 import torch.nn.functional as f
-from torch_geometric.nn import GATConv, GATv2Conv, GatedGraphConv, JumpingKnowledge
+from torch_geometric.nn import GATv2Conv, GatedGraphConv, JumpingKnowledge, SAGPooling
+from torch_geometric.nn.conv.gat_conv import GATConv
 from torch_geometric.nn.glob.glob import global_max_pool, global_mean_pool, global_add_pool
 from torch_geometric.nn.glob.sort import global_sort_pool
 
@@ -76,7 +77,7 @@ class GAT(torch.nn.Module):
         else:
             raise ValueError("Not a valid pool")
             
-        self.gats = nn.ModuleList([nn.ModuleList([GATConv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for i in range(passes)])
+        self.gats = nn.ModuleList([nn.ModuleList([GATv2Conv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for i in range(passes)])
         if self.passes:
             self.jump = JumpingKnowledge(self.mode, channels=inputLayerSize, num_layers=self.passes)
         if self.mode == 'cat':

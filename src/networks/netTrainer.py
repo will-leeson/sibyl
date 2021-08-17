@@ -1,8 +1,6 @@
-from torch._C import StringType
 from ggnn import GGNN, GAT
-from utils.utils import ModifiedMarginRankingLoss, train_model, getCorrectProblemTypes, evaluate, GeometricDataset
+from utils.utils import ModifiedMarginRankingLoss, topKLoss, train_model, getCorrectProblemTypes, evaluate, GeometricDataset
 import torch, json, datetime, argparse
-import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 
@@ -21,8 +19,9 @@ if __name__ == '__main__':
 	parser.add_argument('--architecture', help="GGNN, GAT", default="GGNN", choices=["GGNN","GAT"])
 	parser.add_argument("--hidden-layers", help="Number of hidden layers", type=int, default=1)
 	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="sum", choices=['max', 'cat', 'lstm'])
-	parser.add_argument("-k", "--k-final-nodes", help="Sort Pool Size (Default 10)", default=10, type=int)
-	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, sort)", default="add", choices=["max", "mean","add","sort"])
+	parser.add_argument("-k", "--k-final-nodes", help="Sort/SAG Pool Size (Default 10)", default=10, type=int)
+	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, sort)", default="mean", choices=["max", "mean","add","sort"])
+	parser.add_argument("-g", "--gpu", help="Which GPU should the model be on", default=0, type=int)
 
 	args = parser.parse_args()
 
@@ -43,15 +42,15 @@ if __name__ == '__main__':
 	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets)
 
 	if args.architecture == 0:
-		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=torch.cuda.current_device())
+		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=args.gpu)
 	else:
-		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=args.k_final_nodes, pool=args.pool_type).to(device=torch.cuda.current_device())
+		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=args.k_final_nodes, pool=args.pool_type).to(device=args.gpu)
 
-	loss_fn = ModifiedMarginRankingLoss(margin=0.1).cuda()
+	loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
-	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs)
+	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu)
 	train_acc, train_loss, val_acc, val_loss = report
-	test_data = evaluate(model, test_set)
+	test_data = evaluate(model, test_set, gpu=args.gpu)
 	np.savez_compressed(str(args)+"_"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss, test_data)
 	torch.save(model.state_dict(), str(args)+"_"+str(datetime.datetime.now())+".pt")
