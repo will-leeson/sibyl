@@ -153,18 +153,18 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
     
     return train_accuracies, train_losses, val_accuracies, val_losses
 
-def evaluate(model, test_set, gpu):
+def evaluate(model, test_set, gpu=0):
     '''
     Function used to evaluate model on test set
     '''
-    startTime = time.time()
-    corr_sum = 0.0
-    bestPredicts = 0
-    correctPredicts = 0
-    possibleCorrect = 0
-    topKCorrect = 0
+    corr_sum = np.array([0.0]*4)
+    bestPredicts = np.array([0]*4)
+    correctPredicts = np.array([0]*4)
+    possibleCorrect = np.array([0]*4)
+    topKCorrect = np.array([0]*4)
+    probCounter = np.array([0]*4)
 
-    predicted = [0,0,0,0,0,0,0,0,0,0]
+    predicted = np.array([[0]*10]*5)
 
     model.eval()
 
@@ -180,26 +180,34 @@ def evaluate(model, test_set, gpu):
 
         for j in range(len(labels)):
             corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
-            corr_sum += corr
+            corr_sum[int(problemTypes.item())] += corr
 
-        bestPredicts += (scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
+        bestPredicts[int(problemTypes.item())] += (scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
 
         for idx in scores.argmax(dim=1):
-            predicted[idx.item()]+=1
+            predicted[0][idx.item()]+=1
+            predicted[int(problemTypes.item())+1][idx.item()]+=1
 
         maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
         gather = labels.gather(1, maxScoresIdx)
-        correctPredicts+=(gather>0).sum().item()
+        correctPredicts[int(problemTypes.item())]+=(gather>0).sum().item()
 
         topKIndexes = torch.topk(scores, 3)[1]
         gather = labels.gather(1, topKIndexes)
-        topKCorrect+=((gather>0).sum()>0).sum().item()
+        topKCorrect[int(problemTypes.item())]+=((gather>0).sum()>0).sum().item()
         
         if labels.max() > 0:
-            possibleCorrect+=1
-    #return [scores, time.time()-startTime]
-    return [corr_sum/i, bestPredicts/i, correctPredicts/possibleCorrect, topKCorrect/possibleCorrect, predicted, time.time()-startTime]
+            possibleCorrect[int(problemTypes.item())]+=1
+        probCounter[int(problemTypes.item())]+=1
+    
+    res = [[],[],[],[],[]]
 
+    res[0] = [corr_sum.sum()/probCounter.sum(), bestPredicts.sum()/probCounter.sum(), correctPredicts.sum()/possibleCorrect.sum(), topKCorrect.sum()/possibleCorrect.sum()]
+    for i in range(0,len(res)-1):
+        res[i+1] = [corr_sum[i]/probCounter[i], bestPredicts[i]/probCounter[i], correctPredicts[i]/possibleCorrect[i], topKCorrect[i]/possibleCorrect[i]]
+
+
+    return res, predicted
 def getCorrectProblemTypes(labels, problemTypes):
     '''
     Function used to make sure we are only looking at problem types that we want

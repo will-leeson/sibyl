@@ -51,6 +51,7 @@ if __name__ == '__main__':
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu)
 	train_acc, train_loss, val_acc, val_loss = report
-	test_data = evaluate(model, test_set, gpu=args.gpu)
-	np.savez_compressed(str(args)+"_"+str(datetime.datetime.now())+".npz", train_acc, train_loss, val_acc, val_loss, test_data)
+	(overallRes, overflowRes, reachSafetyRes, terminationRes, memSafetyRes), (overallChoices, overflowChoices, reachSafetyChoices, terminationChoices, memSafetyChoices)  = evaluate(model, test_set, gpu=args.gpu)
+	
+	np.savez_compressed(str(args)+"_"+str(datetime.datetime.now())+".npz", train_acc = train_acc, train_loss = train_loss, val_acc = val_acc, val_loss = val_loss, overallRes=overallRes, overflowRes=overflowRes, reachSafetyRes=reachSafetyRes, terminationRes=terminationRes, memSafetyRes=memSafetyRes, overallChoices=overallChoices, overflowChoices=overflowChoices, reachSafetyChoices=reachSafetyChoices, terminationChoices=terminationChoices, memSafetyChoices=memSafetyChoices)
 	torch.save(model.state_dict(), str(args)+"_"+str(datetime.datetime.now())+".pt")
