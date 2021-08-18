@@ -17,7 +17,6 @@ if __name__ == '__main__':
 	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "CFG"], choices=['AST', 'DFG', "CFG"])
 	parser.add_argument("-p", "--problem-types", help="Which problem types to consider:termination, overflow, reachSafety, memSafety (Default=All)", nargs="+", default=['termination', 'overflow', 'reachSafety', 'memSafety'], choices=['termination', 'overflow', 'reachSafety', 'memSafety'])
 	parser.add_argument('--architecture', help="GGNN, GAT", default="GGNN", choices=["GGNN","GAT"])
-	parser.add_argument("--hidden-layers", help="Number of hidden layers", type=int, default=1)
 	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="sum", choices=['max', 'cat', 'lstm'])
 	parser.add_argument("-k", "--k-final-nodes", help="Sort/SAG Pool Size (Default 10)", default=10, type=int)
 	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, sort)", default="mean", choices=["max", "mean","add","sort"])
@@ -53,5 +52,7 @@ if __name__ == '__main__':
 	train_acc, train_loss, val_acc, val_loss = report
 	(overallRes, overflowRes, reachSafetyRes, terminationRes, memSafetyRes), (overallChoices, overflowChoices, reachSafetyChoices, terminationChoices, memSafetyChoices)  = evaluate(model, test_set, gpu=args.gpu)
 	
-	np.savez_compressed(str(args)+"_"+str(datetime.datetime.now())+".npz", train_acc = train_acc, train_loss = train_loss, val_acc = val_acc, val_loss = val_loss, overallRes=overallRes, overflowRes=overflowRes, reachSafetyRes=reachSafetyRes, terminationRes=terminationRes, memSafetyRes=memSafetyRes, overallChoices=overallChoices, overflowChoices=overflowChoices, reachSafetyChoices=reachSafetyChoices, terminationChoices=terminationChoices, memSafetyChoices=memSafetyChoices)
-	torch.save(model.state_dict(), str(args)+"_"+str(datetime.datetime.now())+".pt")
+	returnString = str(args.time_steps) + "_time_steps_" +str(args.epochs)+ "_epochs_" +str(args.problem_types)+ str(args.edge_sets)+"_" + args.mode+ "_mode_" + args.pool_type + "_pool_" + str(datetime.datetime.now())
+
+	np.savez_compressed(returnString+".npz", train_acc = train_acc, train_loss = train_loss, val_acc = val_acc, val_loss = val_loss, overallRes=overallRes, overflowRes=overflowRes, reachSafetyRes=reachSafetyRes, terminationRes=terminationRes, memSafetyRes=memSafetyRes, overallChoices=overallChoices, overflowChoices=overflowChoices, reachSafetyChoices=reachSafetyChoices, terminationChoices=terminationChoices, memSafetyChoices=memSafetyChoices)
+	torch.save(model.state_dict(), returnString+".pt")
