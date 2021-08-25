@@ -71,7 +71,7 @@ class topKLoss(nn.Module):
 
 
 
-def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs, gpu):
+def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs, gpu, task, k=1):
     '''
     Function used to train networks
     '''
@@ -82,31 +82,43 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
     train_accuracies = []; val_accuracies = []
     train_losses = []; val_losses = []
 
-    k=3
-
     for epoch in range(0, num_epochs):
         corr_sum = 0.0
         cum_loss = 0.0
+
+        topk_acc = 0.0
+        success_acc = 0.0
         model.train()
         torch.enable_grad()
-
+        success_counter = 0
         for (i, ((graphs, problemTypes), labels)) in enumerate(tqdm.tqdm(train_loader)):
+            if task == "success" and labels.max()<0:
+                pass
+            success_counter+=1
             graphs = graphs.to(device=gpu)
             problemTypes = problemTypes.to(device=gpu)
             labels = labels.to(device=gpu)
 
             with autocast():
                 scores = model(graphs, problemTypes)
-                loss = loss_fn(scores, labels)      
-            cum_loss+=loss.cpu().detach().item()
+                if task == "rank":
+                    loss = loss_fn(scores, labels)
+                    cum_loss+=loss.cpu().detach().item()
+                elif task == "topk" or task == "success":
+                    loss = loss_fn(nn.functional.log_softmax(scores, dim=1), labels.argmax(dim=1))    
+                    cum_loss+=loss.cpu().detach().item()
+
 
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum+=corr
                 assert(corr <=1)
-                # _, scoreTopk = scores.topk(k)
-                # _, labelTopk = labels.topk(k)
-                # corr_sum += np.setdiff1d(scoreTopk.cpu(), labelTopk.cpu()).size/k
+                _, scoreTopk = scores.topk(k)
+                labelTopk = labels.argmax()
+                topk_acc += labelTopk in scoreTopk
+                
+                success_acc += 1 if labels[j][scores.argmax()]>0 else 0
+
 
             optimizer.zero_grad()
             loss.backward()
@@ -114,7 +126,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             optimizer.step()
 
             if (((i+1)/round(len(trainset), -2))*100)%10==0 or (i+1)==len(train_loader):
-                mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i*batchSize), 4)) + ", Avg-Corr:" +  str(round(corr_sum/(i*batchSize), 4))
+                mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i*batchSize), 4)) + ", Avg-Corr:" +  str(round(corr_sum/(i*batchSize), 4)) + ", TopK-Acc:"+str(round(topk_acc/(i*batchSize), 4)) + ", Success-Acc:"+str(round(success_acc/success_counter,4))
                 print(mystr)
                 train_accuracies.append(round(corr_sum/i, 4))
                 train_losses.append(round(cum_loss/i, 4))
@@ -123,22 +135,35 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         cum_loss = 0.0
         model.eval()
 
+        topk_acc = 0.0
+        topk_loss = 0.0
+        success_acc = 0.0
+        success_counter = 0
+
         for (i, ((graphs, problemTypes), labels)) in enumerate((val_loader)):
+            if task == "success" and labels.max()<0:
+                pass
+            success_counter+=1
             graphs = graphs.to(device=gpu)
             problemTypes = problemTypes.to(device=gpu)
             labels = labels.to(device=gpu)
             with autocast():
                 with torch.no_grad():
                     scores = model(graphs, problemTypes)
-                    loss =loss_fn(scores, labels)
+                    if task == "rank":
+                        loss = loss_fn(scores, labels)
+                    elif task == "topk" or task == "success":
+                        loss = loss_fn(nn.functional.log_softmax(scores, dim=1), labels.argmax(dim=1))    
                     cum_loss+=loss.cpu().detach().item()
 
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum += corr
-                # _, scoreTopk = scores.topk(k)
-                # _, labelTopk = labels.topk(k)
-                # corr_sum += np.setdiff1d(scoreTopk.cpu(), labelTopk.cpu()).size/k
+                _, scoreTopk = scores.topk(k)
+                labelTopk = labels.argmax()
+                topk_acc += labelTopk in scoreTopk
+
+                success_acc += 1 if labels[j][scores.argmax()]>0 else 0
 
         scheduler.step(cum_loss/(i+1))
 
@@ -146,22 +171,23 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         val_accuracies.append(round(corr_sum/i, 4))
         val_losses.append(round(cum_loss/i, 4))
 
-        mystr = "Valid-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i*batchSize), 4)) + ", Avg-Corr:" +  str(round(corr_sum/(i*batchSize), 4))
+        mystr = "Valid-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i*batchSize), 4)) + ", Avg-Corr:" +  str(round(corr_sum/(i*batchSize), 4)) + ", TopK-Acc:"+str(round(topk_acc/(i*batchSize), 4)) + ", Success-Acc:"+str(round(success_acc/success_counter,4))
         print(mystr)
         if optimizer.param_groups[0]['lr']<1e-7:
             break
     
     return train_accuracies, train_losses, val_accuracies, val_losses
 
-def evaluate(model, test_set, gpu=0):
+def evaluate(model, test_set, gpu=0, k=3):
     '''
     Function used to evaluate model on test set
     '''
     corr_sum = np.array([0.0]*4)
+    topKAcc = np.array([0.0]*4)
     bestPredicts = np.array([0]*4)
     correctPredicts = np.array([0]*4)
     possibleCorrect = np.array([0]*4)
-    topKCorrect = np.array([0]*4)
+    predSpot = np.array([[0]*10]*4)
     probCounter = np.array([0]*4)
 
     predicted = np.array([[0]*10]*5)
@@ -181,6 +207,9 @@ def evaluate(model, test_set, gpu=0):
         for j in range(len(labels)):
             corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
             corr_sum[int(problemTypes.item())] += corr
+            _, scoreTopk = scores.topk(k)
+            labelTopk = labels.argmax()
+            topKAcc[int(problemTypes.item())] += labelTopk in scoreTopk
 
         bestPredicts[int(problemTypes.item())] += (scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
 
@@ -192,19 +221,18 @@ def evaluate(model, test_set, gpu=0):
         gather = labels.gather(1, maxScoresIdx)
         correctPredicts[int(problemTypes.item())]+=(gather>0).sum().item()
 
-        topKIndexes = torch.topk(scores, 3)[1]
-        gather = labels.gather(1, topKIndexes)
-        topKCorrect[int(problemTypes.item())]+=((gather>0).sum()>0).sum().item()
+        predSpot[int(problemTypes.item())][np.where((-labels).argsort().cpu().numpy()==scores.argmax().item())[1]] +=1
+        
         
         if labels.max() > 0:
             possibleCorrect[int(problemTypes.item())]+=1
         probCounter[int(problemTypes.item())]+=1
     
     res = [[],[],[],[],[]]
-
-    res[0] = [corr_sum.sum()/probCounter.sum(), bestPredicts.sum()/probCounter.sum(), correctPredicts.sum()/possibleCorrect.sum(), topKCorrect.sum()/possibleCorrect.sum()]
+    
+    res[0] = [corr_sum.sum()/probCounter.sum(), topKAcc.sum()/probCounter.sum(), bestPredicts.sum()/probCounter.sum(), correctPredicts.sum()/possibleCorrect.sum(), predSpot.sum(axis=0)]
     for i in range(0,len(res)-1):
-        res[i+1] = [corr_sum[i]/probCounter[i], bestPredicts[i]/probCounter[i], correctPredicts[i]/possibleCorrect[i], topKCorrect[i]/possibleCorrect[i]]
+        res[i+1] = [corr_sum[i]/probCounter[i], topKAcc[i]/probCounter[i], bestPredicts[i]/probCounter[i], correctPredicts[i]/possibleCorrect[i], predSpot[i]]
 
 
     return res, predicted
