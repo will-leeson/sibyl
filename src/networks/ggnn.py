@@ -29,8 +29,8 @@ class GGNN(nn.Module):
         self.fcLast = nn.Linear(80, outputLayerSize)
         self.collate=collate
 
-    def forward(self, data, problemType):
-        x, edge_index = data.x, data.edge_index
+    def forward(self, data):
+        x, edge_index, problemType = data.x, data.edge_index, data.problemType
 
         x = f.dropout(x, p=0.6, training=self.training)
 
@@ -89,8 +89,8 @@ class GAT(torch.nn.Module):
             self.fc2 = nn.Linear(((inputLayerSize*self.k)+1)//2,((inputLayerSize*self.k)+1)//2)
             self.fcLast = nn.Linear(((inputLayerSize*self.k)+1)//2, outputLayerSize)
     
-    def forward(self, data, problemType):
-        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+    def forward(self, data):
+        x, edge_index, edge_attr, problemType = data.x, data.edge_index, data.edge_attr, data.problemType
 
         if self.passes:
             xs = [x]
@@ -108,7 +108,8 @@ class GAT(torch.nn.Module):
             x = self.pool(x, data.batch, self.k)
         else:
             x = self.pool(x, data.batch)
-        x = torch.cat((x.reshape(1,x.size(0)*x.size(1)), problemType), dim=1)
+
+        x = torch.cat((x.reshape(1,x.size(0)*x.size(1)), problemType.unsqueeze(1)), dim=1)
 
         x = self.fc1(x)
         x = f.leaky_relu(x)

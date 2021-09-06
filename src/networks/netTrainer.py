@@ -22,6 +22,7 @@ if __name__ == '__main__':
 	parser.add_argument("-g", "--gpu", help="Which GPU should the model be on", default=0, type=int)
 	parser.add_argument("--task", help="Which task are you training for (topK, rank, success)?", default="rank", choices=['topk', 'ranking', 'success'])
 	parser.add_argument("-k", "--topk", help="k for topk (1-10)", default=3, type=int)
+	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
 
 
 	args = parser.parse_args()
@@ -38,14 +39,15 @@ if __name__ == '__main__':
 	testLabels = [(key, [item[1] for item in testFiles[key]]) for key in testFiles]
 	testLabels = getCorrectProblemTypes(testLabels, args.problem_types)
 
-	train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", args.edge_sets)
-	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
-	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets)
+	train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
+	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
+	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
+
 
 	if args.net == 'GGNN':
-		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=len(train_set[0][0][0][0]), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=args.gpu)
+		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=args.gpu)
 	else:
-		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, pool=args.pool_type).to(device=args.gpu)
+		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, pool=args.pool_type).to(device=args.gpu)
 
 	if args.task == "rank":
 		loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)

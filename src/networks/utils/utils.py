@@ -18,31 +18,43 @@ This file defines some utility functions
 '''
 
 class GeometricDataset(GDataset):
-    def __init__(self, labels, data_dir, edge_sets):
+    def __init__(self, labels, data_dir, edge_sets, should_cache):
         self.labels = labels
         self.data_dir = data_dir
         self.edge_sets = edge_sets
+        if should_cache:
+            self.cache = dict()
+        else:
+            self.cache = None 
     
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npz")
-        edges = np.load(os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+"Edges.npz"))
+        res = None
+        if (not self.cache) or (idx not in self.cache):
+            path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npz")
+            edges = np.load(os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+"Edges.npz"))
 
-        edges_tensor = [torch.from_numpy(edges[edgeSet]) for edgeSet in self.edge_sets]
+            edges_tensor = [torch.from_numpy(edges[edgeSet]) for edgeSet in self.edge_sets]
 
-        edge_labels = torch.cat([torch.full((len(edges_tensor[i]),1),i) for i in range(len(edges_tensor))], dim=0)        
-        edges_tensor = torch.cat(edges_tensor).transpose(0,1).long()
+            edge_labels = torch.cat([torch.full((len(edges_tensor[i]),1),i) for i in range(len(edges_tensor))], dim=0)        
+            edges_tensor = torch.cat(edges_tensor).transpose(0,1).long()
 
-        data = np.load(path)
-        tokens = torch.from_numpy(data['node_rep'])
+            data = np.load(path)
+            tokens = torch.from_numpy(data['node_rep'])
 
-        label = torch.tensor(self.labels[idx][1])
-        problemType = torch.tensor([float(self.labels[idx][0].split("|||")[1])])
+            label = torch.tensor(self.labels[idx][1])
+            problemType = torch.tensor([float(self.labels[idx][0].split("|||")[1])])
 
-        return (Data(x=tokens.float(), edge_index=edges_tensor, edge_attr=edge_labels), problemType), label
+            res = Data(x=tokens.float(), edge_index=edges_tensor, edge_attr=edge_labels, problemType=problemType),label
 
+        if self.cache and idx not in self.cache:
+            self.cache[idx] = res
+        elif self.cache:
+            res = self.cache[idx]
+
+        return res
 
 class ModifiedMarginRankingLoss(nn.Module):
     def __init__(self, margin=0,gpu=0):
@@ -91,16 +103,15 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         model.train()
         torch.enable_grad()
         success_counter = 0
-        for (i, ((graphs, problemTypes), labels)) in enumerate(tqdm.tqdm(train_loader)):
+        for (i, (graphs, labels)) in enumerate(tqdm.tqdm(train_loader)):
+            graphs = graphs.to(device=gpu)
+            labels = labels.to(device=gpu)
             if task == "success" and labels.max()<0:
                 pass
             success_counter+=1
-            graphs = graphs.to(device=gpu)
-            problemTypes = problemTypes.to(device=gpu)
-            labels = labels.to(device=gpu)
 
             with autocast():
-                scores = model(graphs, problemTypes)
+                scores = model(graphs)
                 if task == "rank":
                     loss = loss_fn(scores, labels)
                     cum_loss+=loss.cpu().detach().item()
@@ -140,16 +151,15 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         success_acc = 0.0
         success_counter = 0
 
-        for (i, ((graphs, problemTypes), labels)) in enumerate((val_loader)):
+        for (i, (graphs,labels)) in enumerate((val_loader)):
+            graphs = graphs.to(device=gpu)
+            labels = labels.to(device=gpu)
             if task == "success" and labels.max()<0:
                 pass
             success_counter+=1
-            graphs = graphs.to(device=gpu)
-            problemTypes = problemTypes.to(device=gpu)
-            labels = labels.to(device=gpu)
             with autocast():
                 with torch.no_grad():
-                    scores = model(graphs, problemTypes)
+                    scores = model(graphs)
                     if task == "rank":
                         loss = loss_fn(scores, labels)
                     elif task == "topk" or task == "success":
