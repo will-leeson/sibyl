@@ -6,7 +6,7 @@ from torch_geometric.data import Data
 from torch.nn import MarginRankingLoss
 import torch
 import torch.nn as nn
-import os, itertools, tqdm, time
+import os, itertools, tqdm, json
 import numpy as np
 from scipy.stats import spearmanr
 from torch.distributed import ReduceOp
@@ -197,22 +197,22 @@ def evaluate(model, test_set, gpu=0, k=3):
     bestPredicts = np.array([0]*4)
     correctPredicts = np.array([0]*4)
     possibleCorrect = np.array([0]*4)
-    predSpot = np.array([[0]*10]*4)
+    predSpot = np.array([[0]*test_set[0][1].size(0)]*4)
     probCounter = np.array([0]*4)
 
-    predicted = np.array([[0]*10]*5)
+    predicted = np.array([[0]*test_set[0][1].size(0)]*5)
 
     model.eval()
 
     test_loader = torch_geometric.data.DataLoader(dataset=test_set, batch_size=1)
 
-    for (i, ((graphs, problemTypes), labels)) in enumerate(tqdm.tqdm(test_loader)):
+    for (i, (graphs,labels)) in enumerate(tqdm.tqdm(test_loader)):
         graphs = graphs.to(device=gpu)
-        problemTypes = problemTypes.to(device=gpu)
         labels = labels.to(device=gpu)
+        problemTypes = graphs.problemType
         with autocast():
             with torch.no_grad():
-                scores = model(graphs, problemTypes)
+                scores = model(graphs)
 
         for j in range(len(labels)):
             corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
@@ -260,3 +260,19 @@ def getCorrectProblemTypes(labels, problemTypes):
         labels = [item for item in labels if item[0].split("|||")[1]!="3"]
 
     return labels
+
+def groupLabels(labels, mapping="../../data/toolMapping.json"):
+    toolToAlg, algToTool = json.load(open(mapping))
+
+    newLabels = []
+    for label in labels:
+        vals = []
+        for alg in algToTool:
+            val = []
+            for tool in algToTool[alg]:
+                val.append(label[1][toolToAlg[tool][0]]/len(toolToAlg[tool][1]))
+            vals.append(sum(val)/len(algToTool[alg]))
+        newLabels.append((label[0],vals))
+
+    assert(len(newLabels) == len(labels))
+    return newLabels

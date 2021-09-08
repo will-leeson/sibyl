@@ -1,5 +1,5 @@
-from ggnn import GGNN, GAT
-from utils.utils import ModifiedMarginRankingLoss, topKLoss, train_model, getCorrectProblemTypes, evaluate, GeometricDataset
+from gnn import GGNN, GAT
+from utils.utils import ModifiedMarginRankingLoss, train_model, getCorrectProblemTypes, evaluate, GeometricDataset, groupLabels
 import torch, json, time, argparse
 import torch.optim as optim
 import numpy as np
@@ -23,6 +23,7 @@ if __name__ == '__main__':
 	parser.add_argument("--task", help="Which task are you training for (topK, rank, success)?", default="rank", choices=['topk', 'ranking', 'success'])
 	parser.add_argument("-k", "--topk", help="k for topk (1-10)", default=3, type=int)
 	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
+	parser.add_argument("--alg", help="If activate, will look at algorithm groups instead of tools", action="store_true")
 
 
 	args = parser.parse_args()
@@ -38,6 +39,11 @@ if __name__ == '__main__':
 	testFiles = json.load(open("../../data/subsetTestFiles.json"))
 	testLabels = [(key, [item[1] for item in testFiles[key]]) for key in testFiles]
 	testLabels = getCorrectProblemTypes(testLabels, args.problem_types)
+
+	if args.alg:
+		trainLabels = groupLabels(trainLabels)
+		valLabels = groupLabels(valLabels)
+		testLabels = groupLabels(testLabels)
 
 	train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
 	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
