@@ -1,7 +1,10 @@
 #!/bin/bash
 
-for comb in 'AST CFG DFG' 'AST CFG' 'AST DFG' 'AST' 'CFG' 'DFG'
+for i in {4..5}
 do
-	python3 netTrainer.py --net GAT -t $2 --edge-sets $comb -m cat --pool-type mean --gpu $1 -e 50
-done
+	for comb in 'AST CFG' 'AST'
+	do
+		sbatch --reservation wel2vw_39 -p gpu --gres=gpu:1 -w cheetah01 ./netTrainer.sh $i 50 "$comb"
+	done
 
+done
