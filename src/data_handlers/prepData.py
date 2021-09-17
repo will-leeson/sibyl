@@ -40,7 +40,7 @@ def makeFinalRep(graph):
         for inNode in graphDict["AST"][outNode]:
             assert(outNode in tokenToNum)
             assert(inNode in tokenToNum)
-            ASTDict.append([tokenToNum[inNode],tokenToNum[outNode]])
+            ASTDict.append([tokenToNum[outNode],tokenToNum[inNode]])
 
     CFGDict = []
     for outNode in graphDict["CFG"]:
@@ -51,25 +51,25 @@ def makeFinalRep(graph):
                 print(outNode)
                 assert()
             assert(inNode in tokenToNum)
-            CFGDict.append([tokenToNum[inNode],tokenToNum[outNode]])
+            CFGDict.append([tokenToNum[outNode],tokenToNum[inNode]])
             
     DFGDict = []
     for outNode in graphDict["DFG"]:
         for inNode in graphDict["DFG"][outNode]:
             if type(inNode) == list:
                 for node in inNode:
-                   DFGDict.append([tokenToNum[node],tokenToNum[outNode]])
+                   DFGDict.append([tokenToNum[outNode],tokenToNum[node]])
             else:
                 if inNode not in tokenToNum:
                     continue
                 if outNode not in tokenToNum:
                     continue
-                DFGDict.append([tokenToNum[inNode],tokenToNum[outNode]])
+                DFGDict.append([tokenToNum[outNode],tokenToNum[inNode]])
     nodeRepresentations = np.array(nodeRepresentations)
-    np.savez_compressed("../../data/final_graphs/"+graph+"Edges.npz", AST = np.array(ASTDict), CFG = np.array(CFGDict), DFG = np.array(DFGDict))
+    np.savez_compressed("../../data/final_graphs/"+graph+"Edges.npz", AST = np.array(ASTDict, dtype="long"), CFG = np.array(CFGDict, dtype="long"), DFG = np.array(DFGDict, dtype="long"))
     np.savez_compressed("../../data/final_graphs/"+graph+".npz", node_rep = nodeRepresentations)
     
-pool = mp.Pool((mp.cpu_count()-1))
+pool = mp.Pool(mp.cpu_count()-1)
 result_object = [pool.apply_async(makeFinalRep, args=([key.split("|||")[0]])) for key in results]
 
 thing = [r.get() for r in tqdm.tqdm(result_object)]

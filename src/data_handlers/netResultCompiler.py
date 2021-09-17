@@ -1,23 +1,40 @@
 import glob, csv, os, re
 import numpy as np
+from matplotlib import pyplot as plt
 
-resultsFiles = glob.glob("../../data/trainedNetsResults/*.npz")
+resultsFiles = glob.glob("overflow/*.npz")
 
-rawDataFile = csv.writer(open("rawData.csv", 'w'), delimiter=",")
-collatedDataFile = csv.writer(open("collatedData.csv", 'w'), delimiter=",")
+name="overflow"
+rawDataFile = csv.writer(open(name+"Data.csv", 'w'), delimiter=",")
+collatedDataFile = csv.writer(open("collated"+name+"Data.csv", 'w'), delimiter=",")
 
 collatedData = dict()
-rawDataFile.writerow(["numPasses", "hasGru", "hasEdgeNets", "trainginData", "hasAST", "hasCFG", "hasDFG", "corr", "bestPredicts", "correctPredicts"])
+topkDict = dict()
+rawDataFile.writerow(["numPasses", "task", "alg","pool", "k", "mode", "trainginData", "hasAST", "hasCFG", "hasDFG", "corr", "topk", "correct"])
+
+full = []
+opt_succ = []
+opt_spear = []
 for aFile in resultsFiles:
-    numPasses = re.findall(r'[0-9]+', os.path.basename(aFile))[0]
-    assert(int(numPasses)<=5)
-    hasGru = "GRU" not in aFile
-    hasEdgeNets = "EdgeNets" not in aFile
-    hasAST = "NoAST" not in aFile
-    hasCFG = "NoCFG" not in aFile
-    hasDFG = "NoDFG" not in aFile
-    trainingData = "all"
-    if "overflow" in aFile:
+    numPasses = re.findall(r'[0-9]+', os.path.basename(aFile))[2]
+    k = 10
+    if (int(numPasses)>20):
+        numPasses = re.findall(r'[0-9]+', os.path.basename(aFile))[0]
+
+    theSplit = aFile.split("pool_type")
+    pool= "add" if "add" in aFile else "mean" if "mean" in aFile else "sort"
+
+        
+    mode = "lstm" if "lstm" in aFile else "cat" if "cat" in aFile else "max"
+    hasAST = "AST" in aFile
+    hasCFG = "CFG" in aFile
+    hasDFG = "DFG" in aFile
+
+    task = "topk" if "task=topk" in aFile else "success" if "success" in aFile else "rank"
+    
+    if "overflow" in aFile and "memSafety" in aFile:
+        trainingData = "all"
+    elif "overflow" in aFile:
         trainingData = "overflow"
     elif "memSafety" in aFile:
         trainingData = "memSafety"
@@ -25,28 +42,64 @@ for aFile in resultsFiles:
         trainingData = "reachSafety"
     elif "termination" in aFile:
         trainingData = "termination"
-    
-    data = np.load(aFile, allow_pickle=True)['arr_4']
-    if len(data)==3:
-        corr, bestPredicts, correctPredicts = data
-    else:
-        corr, bestPredicts, correctPredicts, _, _ = data
-    rawDataFile.writerow([numPasses, hasGru, hasEdgeNets, hasAST, hasCFG, hasDFG, corr, bestPredicts, correctPredicts])
-    if (numPasses, hasGru, hasEdgeNets, trainingData, hasAST, hasCFG, hasDFG) in collatedData:
-        collatedData[(numPasses, hasGru, hasEdgeNets, trainingData, hasAST, hasCFG, hasDFG)].append([corr, bestPredicts, correctPredicts]) 
-    else:
-        collatedData[(numPasses, hasGru, hasEdgeNets, trainingData, hasAST, hasCFG, hasDFG)] = [[corr, bestPredicts, correctPredicts]]
 
-collatedDataFile.writerow(["numPasses", "hasGru", "hasEdgeNets", "trainginData", "hasAST", "hasCFG", "hasDFG", "corrMean", "corrSTD", "bestPredictsMean", "bestPredictsStd", "correctPredictsMean", "correctPredictsSTD", "num"])
+    alg = "alg=True" in aFile
+    
+    data = np.load(aFile, allow_pickle=True)['overallRes']
+    try:
+        corr, correct, topkChoices = data[0], data[3], data[4]
+        topk = (topkChoices[0])/sum(topkChoices)
+    except IndexError:
+        corr, topk, correct = data[0], data[1], data[3]
+        #print("No topk data:")
+
+    if trainingData == "all" and hasAST and not hasCFG and not hasDFG and not alg and task=="rank" and pool=="mean" and mode=="cat" and numPasses=="4":
+        fullData = np.load(aFile, allow_pickle=True)
+        opt_spear.append([fullData["overallRes"],fullData["reachSafetyRes"],fullData['terminationRes'], fullData['memSafetyRes'], fullData['overflowRes']])
+    
+    if trainingData == "all" and hasAST and not hasCFG and not hasDFG and not alg and task=="rank" and pool=="mean" and mode=="cat" and numPasses=="0":
+        fullData = np.load(aFile, allow_pickle=True)
+        opt_succ.append([fullData["overallRes"],fullData["reachSafetyRes"],fullData['terminationRes'], fullData['memSafetyRes'], fullData['overflowRes']])
+        
+    if trainingData == "all" and hasAST and hasCFG and hasDFG and not alg and task=="rank" and pool=="mean" and mode=="cat" and numPasses=="5":
+        fullData = np.load(aFile, allow_pickle=True)
+        full.append([fullData["overallRes"],fullData["reachSafetyRes"],fullData['terminationRes'], fullData['memSafetyRes'], fullData['overflowRes']])
+
+    rawDataFile.writerow([numPasses, hasAST, hasCFG, hasDFG, corr])
+    if (numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG) in collatedData:
+        collatedData[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)].append([corr, topk, correct]) 
+        topkDict[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)].append(topkChoices)
+    else:
+        collatedData[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)] = [[corr, topk, correct]]
+        topkDict[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)] = [topkChoices]
+
+collatedDataFile.writerow(["numPasses","task", "alg", "pool", "k", "mode", "trainginData", "hasAST", "hasCFG", "hasDFG", "corrMean", "corrSTD", "topk", "topkSTD", "correct", "correctSTD", "num"])
 for key in collatedData:
     corrsMean = np.mean([x[0] for x in collatedData[key]])
     corrsStd =  np.std([x[0] for x in collatedData[key]])
-    bestPredictsMean = np.mean([x[1] for x in collatedData[key]])
-    bestPredictsStd =  np.std([x[1] for x in collatedData[key]])
-    correctPredictsMean = np.mean([x[2] for x in collatedData[key]])
-    correctPredictsStd =  np.std([x[2] for x in collatedData[key]])
+    topkMean = np.mean([x[1] for x in collatedData[key]])
+    topkStd =  np.std([x[1] for x in collatedData[key]])
+    correctMean = np.mean([x[2] for x in collatedData[key]])
+    correctStd =  np.std([x[2] for x in collatedData[key]])
 
-    collatedData[key] = [corrsMean, corrsStd, bestPredictsMean, bestPredictsStd, correctPredictsMean, correctPredictsStd, len(collatedData[key])]
+    collatedData[key] = [corrsMean, corrsStd, topkMean, topkStd, correctMean, correctStd, len(collatedData[key])]
 
 for key in collatedData:
     collatedDataFile.writerow(list(key)+collatedData[key])
+
+# for item in [opt_spear, opt_succ, full]:
+#     spear = [[],[],[],[],[]]
+#     succ = [[],[],[],[],[]]
+#     for thing in item:
+#         spear[0].append(thing[0][0])
+#         spear[1].append(thing[1][0])
+#         spear[2].append(thing[2][0])
+#         spear[3].append(thing[3][0])
+#         spear[4].append(thing[4][0])
+#         succ[0].append(thing[0][3])
+#         succ[1].append(thing[1][3])
+#         succ[2].append(thing[2][3])
+#         succ[3].append(thing[3][3])
+#         succ[4].append(thing[4][3])
+#     print("Spear:", np.mean(spear, axis=1), "\u00B1", np.std(spear, axis=1))
+#     print("Succ:", np.mean(succ, axis=1), "\u00B1", np.std(succ, axis=1))

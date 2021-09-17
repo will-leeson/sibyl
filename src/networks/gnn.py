@@ -89,25 +89,26 @@ class GAT(torch.nn.Module):
             self.fc2 = nn.Linear(((inputLayerSize*self.k)+1)//2,((inputLayerSize*self.k)+1)//2)
             self.fcLast = nn.Linear(((inputLayerSize*self.k)+1)//2, outputLayerSize)
     
-    def forward(self, data):
-        x, edge_index, edge_attr, problemType = data.x, data.edge_index, data.edge_attr, data.problemType
-
+    def forward(self, x, edge_index, edge_attr, problemType, batch):
         if self.passes:
             xs = [x]
 
             for gat in self.gats: 
                 placeholderX = torch.zeros_like(x)
+                assert(len(torch.unique(edge_attr)) == len(gat))
                 for val, gatA in zip(torch.unique(edge_attr), gat):
-                    placeholderX += f.leaky_relu(gatA(x, edge_index.transpose(0,1)[(edge_attr==val).squeeze()].transpose(0,1)))
-                x = placeholderX/len(torch.unique(data.edge_attr))
+                    corr_edges = edge_index.transpose(0,1)[(edge_attr==val).squeeze()].transpose(0,1)
+                    out = gatA(x, corr_edges)
+                    placeholderX += f.leaky_relu(out)
+                x = placeholderX/len(torch.unique(edge_attr))
                 xs += [x]
             
             x = self.jump(xs)
 
         if self.pool == global_sort_pool:
-            x = self.pool(x, data.batch, self.k)
+            x = self.pool(x, batch, self.k)
         else:
-            x = self.pool(x, data.batch)
+            x = self.pool(x, batch)
 
         x = torch.cat((x.reshape(1,x.size(0)*x.size(1)), problemType.unsqueeze(1)), dim=1)
 

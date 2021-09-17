@@ -18,7 +18,7 @@ This file defines some utility functions
 '''
 
 class GeometricDataset(GDataset):
-    def __init__(self, labels, data_dir, edge_sets, should_cache):
+    def __init__(self, labels, data_dir, edge_sets, should_cache=False):
         self.labels = labels
         self.data_dir = data_dir
         self.edge_sets = edge_sets
@@ -111,7 +111,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             success_counter+=1
 
             with autocast():
-                scores = model(graphs)
+                scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
                 if task == "rank":
                     loss = loss_fn(scores, labels)
                     cum_loss+=loss.cpu().detach().item()
@@ -159,7 +159,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             success_counter+=1
             with autocast():
                 with torch.no_grad():
-                    scores = model(graphs)
+                    scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
                     if task == "rank":
                         loss = loss_fn(scores, labels)
                     elif task == "topk" or task == "success":
@@ -212,7 +212,7 @@ def evaluate(model, test_set, gpu=0, k=3):
         problemTypes = graphs.problemType
         with autocast():
             with torch.no_grad():
-                scores = model(graphs)
+                scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
 
         for j in range(len(labels)):
             corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
