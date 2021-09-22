@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python3 netTrainer.py -t $1 -e $2 --edge-sets $3 -m $4
+python3 netTrainer.py -t $1 -e 50 --edge-sets $2
