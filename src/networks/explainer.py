@@ -4,6 +4,7 @@ import argparse, json
 from utils.utils import GeometricDataset
 import torch, torch_geometric
 import matplotlib.pyplot as plt
+import networkx as nx
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="GNN explainer")
@@ -17,6 +18,10 @@ if __name__ == '__main__':
 	parser.add_argument("--model-path", help="The path to the pretrained model", required=True)
 
 	args = parser.parse_args()
+
+	tokenToNumDict = json.load(open("../../data/tokenDict.json"))
+	numToTokenDict = {v:k for k,v in tokenToNumDict.items()}
+	numToTokenDict[65] = "modulo"
 
 	trainFiles = json.load(open("../../data/subsetTrainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
@@ -48,19 +53,18 @@ if __name__ == '__main__':
 		i,_ = torch.where(y>0)
 		if len(graph.x) >5 and i.size(0) < 5 and i.size(0)>0:
 			break
-	print(len(graph.x))
 	model.cpu()
 
 	x, edge_index, edge_attr, problemType, batch = graph.x, graph.edge_index, graph.edge_attr, graph.problemType, graph.batch 
 	node_feat_mask, edge_mask = explainer.explain_graph(x=x, edge_index=edge_index, edge_attr=edge_attr, problemType=problemType)
-	print(edge_index)
-	print(edge_mask)
-	print(len(edge_mask))
-
-	plt.hist(edge_mask.numpy())
-	plt.show()
+	# print(edge_index)
+	# print(edge_mask)
+	# print(len(edge_mask))
 
 	ax, G = explainer.visualize_subgraph(node_idx=-1, edge_index=edge_index, edge_mask=edge_mask, threshold=0.7)
 
-	print(y)
-	plt.show()
+	mapping = {k : numToTokenDict[torch.where(node==1)[0].item()]+str(k) for k,node in zip(range(len(x)), x)}
+
+	G = nx.relabel_nodes(G, mapping)
+
+	nx.nx_agraph.write_dot(G,'test.dot')

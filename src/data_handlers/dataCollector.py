@@ -17,7 +17,7 @@ for line in programs:
         files.append(line.strip())
 
 def handler(filename):
-    output = os.system("timeout 300 ~/Workspace/llvm-project/build/bin/graph-builder ../"+filename+" > ../../data/raw/"+os.path.basename(filename)+".txt 2>err.txt || exit 1")
+    output = os.system("timeout 300 /home/will/Research/llvm-project/build/bin/graph-builder ../"+filename+" > ../../data/raw/"+os.path.basename(filename)+".txt 2>err.txt || exit 1")
     if output != 0:
         return filename+"\n"
     else:
@@ -26,7 +26,7 @@ def handler(filename):
 pool = mp.Pool((mp.cpu_count()*3)//4)
 result_object = [pool.apply_async(handler, args=([aFile])) for aFile in files]
 
-results = [r.get() for r in tqdm.tqdm(result_object)]
+results = [r.get() for r in tqdm.tqdm_gui(result_object)]
 
 pool.close()
 

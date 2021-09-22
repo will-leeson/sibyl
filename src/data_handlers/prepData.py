@@ -1,4 +1,4 @@
-import glob, json, tqdm
+import glob, json, tqdm, os, random
 import multiprocessing as mp
 import numpy as np
 
@@ -54,22 +54,25 @@ def makeFinalRep(graph):
             CFGDict.append([tokenToNum[outNode],tokenToNum[inNode]])
             
     DFGDict = []
-    for outNode in graphDict["DFG"]:
-        for inNode in graphDict["DFG"][outNode]:
-            if type(inNode) == list:
-                for node in inNode:
-                   DFGDict.append([tokenToNum[outNode],tokenToNum[node]])
-            else:
-                if inNode not in tokenToNum:
-                    continue
-                if outNode not in tokenToNum:
-                    continue
-                DFGDict.append([tokenToNum[outNode],tokenToNum[inNode]])
+    try:
+        for outNode in graphDict["DFG"]:
+            for inNode in graphDict["DFG"][outNode]:
+                if type(inNode) == list:
+                    for node in inNode:
+                        DFGDict.append([tokenToNum[outNode],tokenToNum[node]])
+                else:
+                    if inNode not in tokenToNum:
+                        continue
+                    if outNode not in tokenToNum:
+                        continue
+                    DFGDict.append([tokenToNum[outNode],tokenToNum[inNode]])
+    except KeyError:
+        print(graph)
     nodeRepresentations = np.array(nodeRepresentations)
     np.savez_compressed("../../data/final_graphs/"+graph+"Edges.npz", AST = np.array(ASTDict, dtype="long"), CFG = np.array(CFGDict, dtype="long"), DFG = np.array(DFGDict, dtype="long"))
     np.savez_compressed("../../data/final_graphs/"+graph+".npz", node_rep = nodeRepresentations)
     
-pool = mp.Pool(mp.cpu_count()-1)
+pool = mp.Pool(mp.cpu_count()-2)
 result_object = [pool.apply_async(makeFinalRep, args=([key.split("|||")[0]])) for key in results]
 
 thing = [r.get() for r in tqdm.tqdm(result_object)]

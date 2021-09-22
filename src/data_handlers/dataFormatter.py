@@ -96,13 +96,18 @@ def handler(fileName):
     infile = open(fileName)
     try:
         for line in infile:
+            if "(void)" in line:
+                line = "".join(line.split("(void)"))
             newline = "".join(line.strip().split(")"))
             newline = "".join(newline.split("("))
             newline = newline.split(",")
+
             if newline[0] == "AST":
                 #ASTPointer : ASTToken
-                ptrToToken[newline[1]] = newline[2]
-                ptrToToken[newline[3]] = newline[4]
+                if newline[1] not in ptrToToken:
+                    ptrToToken[newline[1]] = newline[2]
+                if newline[3] not in ptrToToken:
+                    ptrToToken[newline[3]] = newline[4]
                 #ASTPointer1 : [ASTPointer2, ...]
                 if newline[1] in astDict:
                     astDict[newline[1]].append(newline[3])
@@ -172,7 +177,7 @@ def handler(fileName):
     return tokenSet
 
 files = glob.glob("../../data/raw/*.txt")
-pool = mp.Pool(8)
+pool = mp.Pool((mp.cpu_count()//4)*3)
 result_object = [pool.apply_async(handler, args=([aFile])) for aFile in files]
 
-results = [r.get() for r in tqdm.tqdm(result_object)]
+results = [r.get() for r in tqdm.tqdm_gui(result_object)]
