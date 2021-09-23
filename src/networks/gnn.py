@@ -95,7 +95,6 @@ class GAT(torch.nn.Module):
 
             for gat in self.gats: 
                 placeholderX = torch.zeros_like(x)
-                assert(len(torch.unique(edge_attr)) == len(gat))
                 for val, gatA in zip(torch.unique(edge_attr), gat):
                     corr_edges = edge_index.transpose(0,1)[(edge_attr==val).squeeze()].transpose(0,1)
                     out = gatA(x, corr_edges)
