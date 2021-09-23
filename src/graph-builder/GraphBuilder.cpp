@@ -4,7 +4,8 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ParentMapContext.h"
 #include <iostream>
-#include <vector>
+#include <sstream>
+#include <set>
 
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/CommonOptionsParser.h"
@@ -15,11 +16,27 @@
 using namespace clang;
 using namespace llvm;
 using namespace clang::tooling;
- 
+
 
 class ASTBuilderVisitor : public RecursiveASTVisitor<ASTBuilderVisitor>{
 public:
     explicit ASTBuilderVisitor(ASTContext *Context) : Context(Context) {}
+
+    void addToSet(const Stmt *s){
+        std::ostringstream oss;
+        oss << s;
+        std::string s1(oss.str());
+        
+        nodes.insert(s1);
+    }
+
+    void addToSet(const Decl *d){
+        std::ostringstream oss;
+        oss << d;
+        std::string d1(oss.str());
+        
+        nodes.insert(d1);
+    }
 
     bool VisitStmt(Stmt *s){
         const auto& parents = Context->getParents(*s);
@@ -59,25 +76,35 @@ public:
                     stringRep = conversion2;
                 }
                 std::cout <<"(AST,("<<sPrime<<","<<parentStringRep<<")"<<","<<"("<<s<<","<<stringRep<<"))"<<std::endl;
+                addToSet(sPrime);
+                addToSet(s);
+
             }
             else if(parent.get<Decl>()){
                 auto dPrime = parent.get<Decl>();
                 std::cout <<"(AST,("<<dPrime<<","<<dPrime->getDeclKindName()<<")"<<","<<"("<<s<<","<<s->getStmtClassName()<<"))"<<std::endl;
+                addToSet(dPrime);
+                addToSet(s);
             }
             else{
                 errs()<<"I'm not sure what this is: " <<parent.getNodeKind().asStringRef().str()<<"\n";
             }
         }
         
-        
-        std::string inputString = "VERIFIER_nondet";
         if(isa<DeclRefExpr>(s)){
             DeclRefExpr* d = cast<DeclRefExpr>(s);
-            if(d->getDecl()->getNameAsString().find(inputString)!=std::string::npos){
-                std::cout<<"(AST,("<<s<<","<<s->getStmtClassName()<<")"<<","<<"("<<d->getDecl()<<","<<"input "<<d->getDecl()->getType().getAsString()<<"))"<<std::endl;
-            }
-            else{
+            std::ostringstream oss;
+            oss << s;
+            std::string s1(oss.str());
+            if(d->getDecl()->isImplicit()){
                 std::cout<<"(AST,("<<s<<","<<s->getStmtClassName()<<")"<<","<<"("<<d->getDecl()<<","<<d->getDecl()->getDeclKindName()<<"))"<<std::endl;
+                addToSet(s);
+                addToSet(d);
+            }
+            else if(nodes.find(s1) == nodes.end()){
+                std::cout<<"(AST,("<<s<<","<<s->getStmtClassName()<<")"<<","<<"("<<d->getDecl()<<","<<d->getDecl()->getDeclKindName()<<"))"<<std::endl;
+                addToSet(s);
+                addToSet(d->getDecl());
             }
         }
 
@@ -97,17 +124,30 @@ public:
                 if(isa<FunctionDecl>(d)){
                     FunctionDecl* f = cast<FunctionDecl>(d);
                     if(f->getNameInfo().getAsString().find(inputString) != std::string::npos){
-                        std::cout <<"(AST,("<<dPrime<<","<<dPrime->getDeclKindName()<<")"<<","<<"("<<d<<","<<"input "<<f->getReturnType().getAsString()<<" ()))"<<std::endl;  
+                        std::cout <<"(AST,("<<dPrime<<","<<dPrime->getDeclKindName()<<")"<<","<<"("<<d<<","<<"input "<<f->getReturnType().getAsString()<<" ()))"<<std::endl;
+                        addToSet(dPrime);
+                        addToSet(d);
+                    }
+                    else if(f->isMain()){
+                        std::cout <<"(AST,("<<dPrime<<","<<dPrime->getDeclKindName()<<")"<<","<<"("<<d<<","<<"main))"<<std::endl;
+                        addToSet(dPrime);
+                        addToSet(d);
                     }
                     else{
                         std::cout <<"(AST,("<<dPrime<<","<<dPrime->getDeclKindName()<<")"<<","<<"("<<d<<","<<d->getDeclKindName()<<"))"<<std::endl;
+                        addToSet(dPrime);
+                        addToSet(d);
                     }
                     for(auto param : f->parameters()){
                         std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"("<<param<<","<<param->getDeclKindName()<<"))"<<std::endl;
+                        addToSet(dPrime);
+                        addToSet(param);
                     }
                 }
                 else{
                     std::cout <<"(AST,("<<dPrime<<","<<dPrime->getDeclKindName()<<")"<<","<<"("<<d<<","<<d->getDeclKindName()<<"))"<<std::endl;
+                    addToSet(dPrime);
+                    addToSet(d);
                 }
             }
         }
@@ -116,19 +156,24 @@ public:
             VarDecl* v = cast<VarDecl>(d);
 
             if(v->getType().getTypePtr()->isBuiltinType()){
-                    std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<"),(typePlaceholder"<<placeholderVal++<<","<<v->getType().getDesugaredType(*Context).getAsString()<<"))"<<std::endl;
+                std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<"),(typePlaceholder"<<placeholderVal++<<","<<v->getType().getDesugaredType(*Context).getAsString()<<"))"<<std::endl;
+                addToSet(d);
             }
             else if(v->getType().getTypePtr()->isStructureType()){
                 std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder"<<placeholderVal++<<",struct))"<<std::endl;
+                addToSet(d);
             }
             else if(v->getType().getTypePtr()->isArrayType()){
                 std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder"<<placeholderVal++<<",array))"<<std::endl;
+                addToSet(d);
             }
             else if(v->getType().getTypePtr()->isPointerType()){
                 std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder"<<placeholderVal++<<",pointer))"<<std::endl;
+                addToSet(d);
             }
             else{
                 std::cout<<"(AST,("<<d<<","<<d->getDeclKindName()<<")"<<","<<"(typePlaceholder"<<placeholderVal++<<",otherType))"<<std::endl;
+                addToSet(d);
             }
         }
 
@@ -138,6 +183,7 @@ public:
 private:
     clang::ASTContext *Context;
     int placeholderVal = 0;
+    std::set<std::string> nodes= {};
 };
 
 class CFGBuilderVisitor : public RecursiveASTVisitor<CFGBuilderVisitor>{
@@ -174,10 +220,10 @@ public:
     void findReferencesHelper(const Stmt *orig, const DynTypedNode node){
         if(node.get<Stmt>()){
             for(auto child : node.get<Stmt>()->children()){
-                if(child!=NULL){
+                if(child!=NULL && !(isa<CompoundStmt>(child))){
                     if(isa<DeclRefExpr>(child)){
                         const DeclRefExpr *d = cast<DeclRefExpr>(child);
-                        if(isa<VarDecl>(d->getDecl())){
+                        if(isa<VarDecl>(d->getDecl())){   
                             std::cout<<"(Ref,"<<stmtNumber<<","<<orig<<",("<<d<<","<<d->getDecl()<<"))"<<std::endl;
                         }
                     }
@@ -190,7 +236,6 @@ public:
     }
 
     void findReferences(const Stmt *node){
-        //Find VarReference. I think thats all you need. Make sure it is not on the LHS of assignment or a ++/--
         if(node != NULL){
             if(isa<BinaryOperator>(node)){
                 const BinaryOperator *b = cast<BinaryOperator>(node);
@@ -233,7 +278,6 @@ public:
             }
         }
         else if(isa<UnaryOperator>(s1)){
-            std::cout<<"You gotta handle a = ++b;"<<std::endl;
             const UnaryOperator *u = cast<UnaryOperator>(s1);
             if(u->isIncrementDecrementOp()){
                 for(auto child : u->children()){
@@ -292,12 +336,12 @@ public:
     }
 
     void printCFGPair(const Decl* d, const Stmt* s){
-        std::cout<<"(CFG,("<<d<<","<<d->getDeclKindName()<<"),("<<s<<","<<s->getStmtClassName()<<"))"<<std::endl;
+        std::cout<<"(CFG,"<<stmtNumber<<",("<<d<<","<<d->getDeclKindName()<<"),("<<s<<","<<s->getStmtClassName()<<"))"<<std::endl;
         stmtNumber++;
     }
 
     void printCFGPair(const Decl* d1, const Decl* d2){
-        std::cout<<"(CFG,("<<d1<<","<<d1->getDeclKindName()<<"),("<<d2<<","<<d2->getDeclKindName()<<"))"<<std::endl;
+        std::cout<<"(CFG,"<<stmtNumber<<",("<<d1<<","<<d1->getDeclKindName()<<"),("<<d2<<","<<d2->getDeclKindName()<<"))"<<std::endl;
         stmtNumber++;
     }
 
@@ -313,31 +357,59 @@ public:
             else{
                 printCFGPair(prevChild, child);
                 prevChild = child;
-            }
+            }   
         }
         
         return true;
     }
 
+    const Stmt* findPredecessor(DynTypedNode call, const CompoundStmt* compound){
+        auto children = compound->children();
+        const Stmt* favoriteChild = compound;
+        bool found = false;
+        for(auto child : children){
+            found = child == call.get<Stmt>();
+            if(found){
+                return favoriteChild;
+            }
+            else{
+                favoriteChild = child;
+            }
+        }
+        return compound;
+    }
+
+    const Stmt* callExprHelper(DynTypedNode call){
+        auto parents = Context->getParents(call);
+
+        for(auto parent : parents){
+            if(parent.get<Stmt>()){
+                auto s = parent.get<Stmt>();
+                bool isValid = isa<IfStmt>(s) || isa<BreakStmt>(s) || WhileStmt::classof(s) || 
+                                 isa<ForStmt>(s) || isa<DoStmt>(s) || isa<ContinueStmt>(s) ||
+                                 SwitchStmt::classof(s) || DefaultStmt::classof(s) || isa<DeclStmt>(s) || isa<BinaryOperator>(s);
+                if(isValid){
+                    return s;
+                }
+                else if(isa<CompoundStmt>(s)){
+                    return findPredecessor(call,cast<CompoundStmt>(s));
+                }
+                else{
+                    return callExprHelper(parent);
+                }
+            }
+            else{
+                return callExprHelper(parent);
+            }
+        }
+    }
+
     bool VisitCallExpr(CallExpr *call){
+        //Call graph edges: From callsite to function and back
         Decl* funDecl = call->getCalleeDecl();
-        printCFGPair(call, funDecl);
-
-        auto successor = findSuccessor(call);
-
         if(funDecl){
-            if(successor.get<Stmt>()){
-                std::cout<<"(CFG,"<<stmtNumber<<",("<<funDecl<<",FunctionExit),("<<successor.get<Stmt>()<<","<<successor.get<Stmt>()->getStmtClassName()<<")"<<std::endl;
-                stmtNumber++;
-            }
-            else if(successor.get<FunctionDecl>()){
-                std::cout<<"(CFG,"<<stmtNumber<<",("<<funDecl<<",FunctionExit),("<<successor.get<FunctionDecl>()<<",FunctionExit))"<<std::endl;
-                stmtNumber++;
-            }
-            else if(successor.get<Decl>()){
-                std::cout<<"(CFG,"<<stmtNumber<<",("<<funDecl<<",FunctionExit),("<<successor.get<Decl>()<<","<<successor.get<Decl>()->getDeclKindName()<<"))"<<std::endl;
-                stmtNumber++;
-            }
+            printCFGPair(call, funDecl);
+            printCFGPair(funDecl, call);
         }
         return true;
     }
@@ -678,7 +750,7 @@ private:
 
 class DFGBuilderVisitor : public RecursiveASTVisitor<DFGBuilderVisitor>{
 public:
-    explicit DFGBuilderVisitor(ASTContext *Context) : Context(Context) {}
+    explicit DFGBuilderVisitor(ASTContext *Context, SourceManager *Manager) : Context(Context), Manager(Manager) {}
 
     void printDFGPair(const Stmt* s1, const Stmt* s2){
         std::cout<<"(DFG,("<<s1<<","<<s1->getStmtClassName()<<"),("<<s2<<","<<s2->getStmtClassName()<<"))"<<std::endl;
@@ -818,13 +890,11 @@ public:
 
     bool VisitCallExpr(CallExpr *c){
         auto d1 = c->getCalleeDecl();
-        
-        if(!isa<FunctionDecl>(d1)){
-            return true;
-        }
-        auto d2 = cast<FunctionDecl>(d1);
-        for(auto [param, arg] : zip(d2->parameters(),c->arguments())){
-            printDFGPair(arg, param);
+        if(d1 && isa<FunctionDecl>(d1)){        
+            auto d2 = cast<FunctionDecl>(d1);
+            for(auto [param, arg] : zip(d2->parameters(),c->arguments())){
+                printDFGPair(arg, param);
+            }
         }
 
         return true;
@@ -832,11 +902,12 @@ public:
 
 private:
     clang::ASTContext *Context;
+    clang::SourceManager *Manager;
 };
 
 class GraphBuilderConsumer : public clang::ASTConsumer {
 public:
-    explicit GraphBuilderConsumer(ASTContext *Context) : VisitorAST(Context), VisitorCFG(Context), VisitorDFG(Context){}
+    explicit GraphBuilderConsumer(ASTContext *Context, SourceManager *Manager) : VisitorAST(Context), VisitorCFG(Context), VisitorDFG(Context, Manager){}
     virtual void HandleTranslationUnit(clang::ASTContext &Context) override {
         VisitorAST.TraverseDecl(Context.getTranslationUnitDecl());
         VisitorCFG.TraverseDecl(Context.getTranslationUnitDecl());
@@ -855,7 +926,7 @@ public:
     virtual std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
         clang::CompilerInstance &Compiler, llvm::StringRef InFile) override{
         return std::unique_ptr<clang::ASTConsumer>(
-            new GraphBuilderConsumer(&Compiler.getASTContext()));
+            new GraphBuilderConsumer(&Compiler.getASTContext(), &Compiler.getSourceManager()));
         }
 };
 
