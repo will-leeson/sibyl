@@ -5,7 +5,6 @@ import torch.optim as optim
 import numpy as np
 from torch_geometric.nn import GNNExplainer
 import torch_geometric
-import matplotlib.pyplot as plt
 
 '''
 File - netTrainer.py
