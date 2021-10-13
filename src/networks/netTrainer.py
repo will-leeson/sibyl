@@ -1,5 +1,5 @@
 from gnn import GGNN, GAT
-from utils.utils import ModifiedMarginRankingLoss, train_model, getCorrectProblemTypes, evaluate, GeometricDataset, groupLabels
+from utils.utils import ModifiedMarginRankingLoss, train_model, getCorrectProblemTypes, evaluate, GeometricDataset, groupLabels, getWeights
 import torch, json, time, argparse
 import torch.optim as optim
 import numpy as np
@@ -51,6 +51,7 @@ if __name__ == '__main__':
 	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
 	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
 
+	getWeights(trainLabels)
 
 	if args.net == 'GGNN':
 		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=args.gpu)

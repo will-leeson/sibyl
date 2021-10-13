@@ -5,6 +5,7 @@ from torch_geometric.data import Dataset as GDataset
 from torch_geometric.data import Data
 from torch.nn import MarginRankingLoss
 import torch
+from torch.utils.data import WeightedRandomSampler
 import torch.nn as nn
 import os, itertools, tqdm, json
 import numpy as np
@@ -83,13 +84,16 @@ class topKLoss(nn.Module):
 
 
 
-def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs, gpu, task, k=1):
+def train_model(model, loss_fn, batchSize, trainset, valset, trainWeights, valWeights, optimizer, scheduler, num_epochs, gpu, task, k=1):
     '''
     Function used to train networks
     '''
 
-    train_loader = torch_geometric.data.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True)
-    val_loader = torch_geometric.data.DataLoader(dataset=valset, batch_size=batchSize, shuffle=True)
+    trainSampler = WeightedRandomSampler(weights=trainWeights, num_samples=len(trainWeights))
+    valSampler = WeightedRandomSampler(weights=valWeights, num_samples=len(valWeights))
+
+    train_loader = torch_geometric.data.DataLoader(dataset=trainset, batch_size=batchSize, sampler=trainSampler)
+    val_loader = torch_geometric.data.DataLoader(dataset=valset, batch_size=batchSize, sampler=valSampler)
 
     train_accuracies = []; val_accuracies = []
     train_losses = []; val_losses = []
@@ -276,3 +280,9 @@ def groupLabels(labels, mapping="../../data/toolMapping.json"):
 
     assert(len(newLabels) == len(labels))
     return newLabels
+
+def getWeights(train_set):
+    labels = np.array([x[1] for x in train_set])
+    weightDict = {tuple(t):1./sum(np.all(labels.argsort() == t, axis=1)) for t in np.unique(labels.argsort(),axis=0)}
+
+    return [weightDict[tuple(t)] for t in labels.argsort()]
