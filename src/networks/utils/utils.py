@@ -84,16 +84,19 @@ class topKLoss(nn.Module):
 
 
 
-def train_model(model, loss_fn, batchSize, trainset, valset, trainWeights, valWeights, optimizer, scheduler, num_epochs, gpu, task, k=1):
+def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs, gpu, task, k=1, trainWeights=None, valWeights=None):
     '''
     Function used to train networks
     '''
+    if trainWeights is None:
+        train_loader = torch_geometric.data.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True)
+        val_loader = torch_geometric.data.DataLoader(dataset=valset, batch_size=batchSize, shuffle=True)
+    else:
+        trainSampler = WeightedRandomSampler(weights=trainWeights, num_samples=len(trainWeights))
+        valSampler = WeightedRandomSampler(weights=valWeights, num_samples=len(valWeights))
 
-    trainSampler = WeightedRandomSampler(weights=trainWeights, num_samples=len(trainWeights))
-    valSampler = WeightedRandomSampler(weights=valWeights, num_samples=len(valWeights))
-
-    train_loader = torch_geometric.data.DataLoader(dataset=trainset, batch_size=batchSize, sampler=trainSampler)
-    val_loader = torch_geometric.data.DataLoader(dataset=valset, batch_size=batchSize, sampler=valSampler)
+        train_loader = torch_geometric.data.DataLoader(dataset=trainset, batch_size=batchSize, sampler=trainSampler)
+        val_loader = torch_geometric.data.DataLoader(dataset=valset, batch_size=batchSize, sampler=valSampler)
 
     train_accuracies = []; val_accuracies = []
     train_losses = []; val_losses = []
@@ -107,7 +110,9 @@ def train_model(model, loss_fn, batchSize, trainset, valset, trainWeights, valWe
         model.train()
         torch.enable_grad()
         success_counter = 0
+        allocated = []
         for (i, (graphs, labels)) in enumerate(tqdm.tqdm(train_loader)):
+            allocated.append(torch.cuda.memory_allocated())
             graphs = graphs.to(device=gpu)
             labels = labels.to(device=gpu)
             if task == "success" and labels.max()<0:

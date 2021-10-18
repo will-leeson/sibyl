@@ -30,15 +30,15 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 
-	trainFiles = json.load(open("../../data/subsetTrainFiles.json"))
+	trainFiles = json.load(open("../../data/BMCTrainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
 	trainLabels = getCorrectProblemTypes(trainLabels, args.problem_types)
 
-	valFiles = json.load(open("../../data/subsetValFiles.json"))
+	valFiles = json.load(open("../../data/BMCValFiles.json"))
 	valLabels = [(key, [item[1] for item in valFiles[key]]) for key in valFiles]
 	valLabels = getCorrectProblemTypes(valLabels, args.problem_types)
 
-	testFiles = json.load(open("../../data/subsetTestFiles.json"))
+	testFiles = json.load(open("../../data/BMCTestFiles.json"))
 	testLabels = [(key, [item[1] for item in testFiles[key]]) for key in testFiles]
 	testLabels = getCorrectProblemTypes(testLabels, args.problem_types)
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
 	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
 	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
 
-	#getWeights(trainLabels)
+	# getWeights(trainLabels)
 
 	if args.net == 'GGNN':
 		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=args.gpu)
