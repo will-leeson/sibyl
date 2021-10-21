@@ -215,10 +215,11 @@ def evaluate(model, test_set, gpu=0, k=3):
 
     test_loader = torch_geometric.data.DataLoader(dataset=test_set, batch_size=1)
 
-    for (i, (graphs,labels)) in enumerate(tqdm.tqdm(test_loader)):
+    for (i, (graphs,labels)) in enumerate(tqdm.tqdm(test_loader, leave=False)):
         graphs = graphs.to(device=gpu)
         labels = labels.to(device=gpu)
         problemTypes = graphs.problemType
+        print(problemTypes)
         with autocast():
             with torch.no_grad():
                 scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
@@ -238,12 +239,13 @@ def evaluate(model, test_set, gpu=0, k=3):
 
         maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
         gather = labels.gather(1, maxScoresIdx)
-        correctPredicts[int(problemTypes.item())]+=(gather>0).sum().item()
+        if labels.min()<=0:
+            correctPredicts[int(problemTypes.item())]+=(gather>0).sum().item()
 
         predSpot[int(problemTypes.item())][np.where((-labels).argsort().cpu().numpy()==scores.argmax().item())[1]] +=1
         
         
-        if labels.max() > 0:
+        if labels.max() > 0 and labels.min()<=0:
             possibleCorrect[int(problemTypes.item())]+=1
         probCounter[int(problemTypes.item())]+=1
     
