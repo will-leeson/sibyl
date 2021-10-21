@@ -2,28 +2,33 @@ import glob, csv, os, re
 import numpy as np
 from matplotlib import pyplot as plt
 
-resultsFiles = glob.glob("overflow/*.npz")
+resultsFiles = glob.glob("finalGatTest/*.npz")
 
-name="overflow"
-rawDataFile = csv.writer(open(name+"Data.csv", 'w'), delimiter=",")
+name="finalGatTest"
+#rawDataFile = csv.writer(open(name+"Data.csv", 'w'), delimiter=",")
 collatedDataFile = csv.writer(open("collated"+name+"Data.csv", 'w'), delimiter=",")
 
 collatedData = dict()
 topkDict = dict()
-rawDataFile.writerow(["numPasses", "task", "alg","pool", "k", "mode", "trainginData", "hasAST", "hasCFG", "hasDFG", "corr", "topk", "correct"])
+#rawDataFile.writerow(["numPasses", "task", "alg","pool", "k", "mode", "trainginData", "hasAST", "hasCFG", "hasDFG", "corr", "topk", "correct"])
 
 full = []
 opt_succ = []
 opt_spear = []
+maxTen = {}
 for aFile in resultsFiles:
-    numPasses = re.findall(r'[0-9]+', os.path.basename(aFile))[2]
-    k = 10
-    if (int(numPasses)>20):
-        numPasses = re.findall(r'[0-9]+', os.path.basename(aFile))[0]
+    k=10
 
     theSplit = aFile.split("pool_type")
     pool= "add" if "add" in aFile else "mean" if "mean" in aFile else "sort"
 
+    theSplit = aFile.split("time_steps=")
+    try:
+        numPasses = re.findall('[0-9]+', theSplit[1])[0]
+    except:
+        print(aFile)
+        exit()
+    assert(int(numPasses)<10)
         
     mode = "lstm" if "lstm" in aFile else "cat" if "cat" in aFile else "max"
     hasAST = "AST" in aFile
@@ -46,6 +51,7 @@ for aFile in resultsFiles:
     alg = "alg=True" in aFile
     
     data = np.load(aFile, allow_pickle=True)['overallRes']
+
     try:
         corr, correct, topkChoices = data[0], data[3], data[4]
         topk = (topkChoices[0])/sum(topkChoices)
@@ -65,7 +71,16 @@ for aFile in resultsFiles:
         fullData = np.load(aFile, allow_pickle=True)
         full.append([fullData["overallRes"],fullData["reachSafetyRes"],fullData['terminationRes'], fullData['memSafetyRes'], fullData['overflowRes']])
 
-    rawDataFile.writerow([numPasses, hasAST, hasCFG, hasDFG, corr])
+    if numPasses == "0":
+        hasAST, hasCFG, hasDFG = "N/A", "N/A", "N/A"
+    if (numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG) in maxTen:
+        if  maxTen[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)] < 10:
+            maxTen[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)]+=1
+        else:
+            continue
+    else:
+        maxTen[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)]=1
+    #rawDataFile.writerow([numPasses, hasAST, hasCFG, hasDFG, corr])
     if (numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG) in collatedData:
         collatedData[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)].append([corr, topk, correct]) 
         topkDict[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)].append(topkChoices)
@@ -73,6 +88,7 @@ for aFile in resultsFiles:
         collatedData[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)] = [[corr, topk, correct]]
         topkDict[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)] = [topkChoices]
 
+print("Yes")
 collatedDataFile.writerow(["numPasses","task", "alg", "pool", "k", "mode", "trainginData", "hasAST", "hasCFG", "hasDFG", "corrMean", "corrSTD", "topk", "topkSTD", "correct", "correctSTD", "num"])
 for key in collatedData:
     corrsMean = np.mean([x[0] for x in collatedData[key]])
