@@ -219,7 +219,6 @@ def evaluate(model, test_set, gpu=0, k=3):
         graphs = graphs.to(device=gpu)
         labels = labels.to(device=gpu)
         problemTypes = graphs.problemType
-        print(problemTypes)
         with autocast():
             with torch.no_grad():
                 scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
