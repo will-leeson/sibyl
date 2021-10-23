@@ -28,17 +28,17 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 
-	trainFiles = json.load(open("../../data/benchTrainFiles.json"))
+	trainFiles = json.load(open("../../data/cpa21TrainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
 
-	valFiles = json.load(open("../../data/benchValFiles.json"))
+	valFiles = json.load(open("../../data/cpa21ValFiles.json"))
 	valLabels = [(key, [item[1] for item in valFiles[key]]) for key in valFiles]
 
-	train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
-	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
+	train_set = GeometricDataset(trainLabels, "../../data/final_graphs21/", args.edge_sets, should_cache=args.cache)
+	val_set = GeometricDataset(valLabels, "../../data/final_graphs21/", args.edge_sets, should_cache=args.cache)
 	
-	trainWeights = getWeights(trainLabels)
-	valWeights = getWeights(valLabels)
+	# trainWeights = getWeights(trainLabels)
+	# valWeights = getWeights(valLabels)
 
 	if args.net == 'GGNN':
 		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=args.gpu)
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 		raise ValueError("Not a valid task") 
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
-	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, trainWeights=trainWeights, valWeights=valWeights, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu, task=args.task, k=args.topk)
+	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu, task=args.task, k=args.topk)
 	train_acc, train_loss, val_acc, val_loss = report
 	
 	returnString = "sv_comp_"+str(args).replace("\'","").replace(",","").strip("Namespace").strip("(").strip(")").replace(" ","_") + "_" + str(int(time.time()))
