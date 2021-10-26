@@ -1,5 +1,5 @@
 from gnn import GGNN, GAT
-from utils.utils import ModifiedMarginRankingLoss, train_model, GeometricDataset, getWeights 
+from utils.utils import ModifiedMarginRankingLoss, train_model, GeometricDataset, getWeights, evaluate
 import torch, json, time, argparse
 import torch.optim as optim
 import numpy as np
@@ -34,8 +34,12 @@ if __name__ == '__main__':
 	valFiles = json.load(open("../../data/cpa21ValFiles.json"))
 	valLabels = [(key, [item[1] for item in valFiles[key]]) for key in valFiles]
 
+	testFiles = json.load(open("../../data/cpa21ResultsGoodSize.json"))
+	testLabels = [(key, [item[1] for item in testFiles[key]]) for key in testFiles]
+
 	train_set = GeometricDataset(trainLabels, "../../data/final_graphs21/", args.edge_sets, should_cache=args.cache)
 	val_set = GeometricDataset(valLabels, "../../data/final_graphs21/", args.edge_sets, should_cache=args.cache)
+	test_set = GeometricDataset(testLabels, "../../data/final_graphs21/", args.edge_sets, should_cache=args.cache)
 	
 	# trainWeights = getWeights(trainLabels)
 	# valWeights = getWeights(valLabels)
@@ -58,5 +62,8 @@ if __name__ == '__main__':
 	
 	returnString = "sv_comp_"+str(args).replace("\'","").replace(",","").strip("Namespace").strip("(").strip(")").replace(" ","_") + "_" + str(int(time.time()))
 
-	np.savez_compressed(returnString+".npz", train_acc = train_acc, train_loss = train_loss, val_acc = val_acc, val_loss = val_loss)
+	(overallRes, overflowRes, reachSafetyRes, terminationRes, memSafetyRes), (overallChoices, overflowChoices, reachSafetyChoices, terminationChoices, memSafetyChoices)  = evaluate(model, test_set, gpu=args.gpu)
+
+	np.savez_compressed(returnString+".npz", train_acc = train_acc, train_loss = train_loss, val_acc = val_acc, val_loss = val_loss, overallRes=overallRes, overflowRes=overflowRes, reachSafetyRes=reachSafetyRes, terminationRes=terminationRes, memSafetyRes=memSafetyRes, overallChoices=overallChoices, overflowChoices=overflowChoices, reachSafetyChoices=reachSafetyChoices, terminationChoices=terminationChoices, memSafetyChoices=memSafetyChoices)
+
 	torch.save(model.state_dict(), returnString+".pt")
