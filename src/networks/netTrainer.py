@@ -26,6 +26,7 @@ if __name__ == '__main__':
 	parser.add_argument("-k", "--topk", help="k for topk (1-10)", default=3, type=int)
 	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
 	parser.add_argument("--alg", help="If activate, will look at algorithm groups instead of tools", action="store_true")
+	parser.add_argument("--no-jump", help="Whether or not to use jumping knowledge", action="store_false", default=True)
 
 
 	args = parser.parse_args()
@@ -56,7 +57,7 @@ if __name__ == '__main__':
 	if args.net == 'GGNN':
 		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=args.gpu)
 	else:
-		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, pool=args.pool_type).to(device=args.gpu)
+		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
 
 	if args.task == "rank":
 		loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)

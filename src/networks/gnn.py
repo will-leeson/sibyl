@@ -59,11 +59,12 @@ class GGNN(nn.Module):
         return x
 
 class GAT(torch.nn.Module):
-    def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize, numAttentionLayers, mode, pool, k):
+    def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize, numAttentionLayers, mode, pool, k, shouldJump=True):
         super(GAT, self).__init__()
         self.passes = passes
         self.mode = mode
         self.k = 1
+        self.shouldJump = shouldJump
 
         if pool == "add":
             self.pool = global_add_pool
@@ -78,9 +79,9 @@ class GAT(torch.nn.Module):
             raise ValueError("Not a valid pool")
             
         self.gats = nn.ModuleList([nn.ModuleList([GATv2Conv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for i in range(passes)])
-        if self.passes:
-            self.jump = JumpingKnowledge(self.mode, channels=inputLayerSize, num_layers=self.passes)
-        if self.mode == 'cat':
+        if self.passes and self.shouldJump:
+           self.jump = JumpingKnowledge(self.mode, channels=inputLayerSize, num_layers=self.passes)
+        if self.mode == 'cat' and self.shouldJump:
             self.fc1 = nn.Linear(((self.passes+1)*inputLayerSize*self.k)+1, (((self.passes+1)*inputLayerSize*self.k)+1)//2)
             self.fc2 = nn.Linear((((self.passes+1)*inputLayerSize*self.k)+1)//2,(((self.passes+1)*inputLayerSize*self.k)+1)//2)
             self.fcLast = nn.Linear((((self.passes+1)*inputLayerSize*self.k)+1)//2, outputLayerSize)
@@ -91,7 +92,8 @@ class GAT(torch.nn.Module):
     
     def forward(self, x, edge_index, edge_attr, problemType, batch):
         if self.passes:
-            xs = [x]
+            if self.shouldJump:
+                xs = [x]
 
             for gat in self.gats: 
                 placeholderX = torch.zeros_like(x)
@@ -100,9 +102,11 @@ class GAT(torch.nn.Module):
                     out = gatA(x, corr_edges, val=val, edge_attr=edge_attr)
                     placeholderX += f.leaky_relu(out)
                 x = placeholderX/len(torch.unique(edge_attr))
-                xs += [x]
-            
-            x = self.jump(xs)
+                if self.shouldJump:
+                    xs += [x]
+
+            if self.shouldJump:
+                x = self.jump(xs)
 
         if self.pool == global_sort_pool:
             x = self.pool(x, batch, self.k)
