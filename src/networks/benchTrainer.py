@@ -28,18 +28,18 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 
-	trainFiles = json.load(open("../../data/cpa21TrainFiles.json"))
+	trainFiles = json.load(open("../../data/algTrainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
 
-	valFiles = json.load(open("../../data/cpa21ValFiles.json"))
+	valFiles = json.load(open("../../data/algValFiles.json"))
 	valLabels = [(key, [item[1] for item in valFiles[key]]) for key in valFiles]
 
-	testFiles = json.load(open("../../data/cpa21ResultsGoodSize.json"))
+	testFiles = json.load(open("../../data/algTestFiles.json"))
 	testLabels = [(key, [item[1] for item in testFiles[key]]) for key in testFiles]
 
-	train_set = GeometricDataset(trainLabels, "../../data/final_graphs21/", args.edge_sets, should_cache=args.cache)
-	val_set = GeometricDataset(valLabels, "../../data/final_graphs21/", args.edge_sets, should_cache=args.cache)
-	test_set = GeometricDataset(testLabels, "../../data/final_graphs21/", args.edge_sets, should_cache=args.cache)
+	train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
+	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
+	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
 	
 	# trainWeights = getWeights(trainLabels)
 	# valWeights = getWeights(valLabels)
@@ -60,7 +60,7 @@ if __name__ == '__main__':
 	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu, task=args.task, k=args.topk)
 	train_acc, train_loss, val_acc, val_loss = report
 	
-	returnString = "sv_comp_"+str(args).replace("\'","").replace(",","").strip("Namespace").strip("(").strip(")").replace(" ","_") + "_" + str(int(time.time()))
+	returnString = "alg_"+str(args).replace("\'","").replace(",","").strip("Namespace").strip("(").strip(")").replace(" ","_") + "_" + str(int(time.time()))
 
 	(overallRes, overflowRes, reachSafetyRes, terminationRes, memSafetyRes), (overallChoices, overflowChoices, reachSafetyChoices, terminationChoices, memSafetyChoices)  = evaluate(model, test_set, gpu=args.gpu)
 

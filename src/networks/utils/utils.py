@@ -89,14 +89,14 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
     Function used to train networks
     '''
     if trainWeights is None:
-        train_loader = torch_geometric.data.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True)
-        val_loader = torch_geometric.data.DataLoader(dataset=valset, batch_size=batchSize, shuffle=True)
+        train_loader = torch_geometric.loader.DataLoader(dataset=trainset, batch_size=batchSize, shuffle=True)
+        val_loader = torch_geometric.loader.DataLoader(dataset=valset, batch_size=batchSize, shuffle=True)
     else:
         trainSampler = WeightedRandomSampler(weights=trainWeights, num_samples=len(trainWeights))
         valSampler = WeightedRandomSampler(weights=valWeights, num_samples=len(valWeights))
 
-        train_loader = torch_geometric.data.DataLoader(dataset=trainset, batch_size=batchSize, sampler=trainSampler)
-        val_loader = torch_geometric.data.DataLoader(dataset=valset, batch_size=batchSize, sampler=valSampler)
+        train_loader = torch_geometric.loader.DataLoader(dataset=trainset, batch_size=batchSize, sampler=trainSampler)
+        val_loader = torch_geometric.loader.DataLoader(dataset=valset, batch_size=batchSize, sampler=valSampler)
 
     train_accuracies = []; val_accuracies = []
     train_losses = []; val_losses = []
