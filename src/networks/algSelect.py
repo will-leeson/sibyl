@@ -28,9 +28,9 @@ for key in tqdm.tqdm(results):
     if val.max() <= 0:
         continue
     
-    if "Problem" in key:
-        if any(key.split("_")[0] in aString for aString in bestVerifier[val.argmax(axis=0)[1]]):
-            continue
+    # if "Problem" in key:
+    #     if any(key.split("_")[0] in aString for aString in bestVerifier[val.argmax(axis=0)[1]]):
+    #         continue
 
     try:
         nodes = torch.from_numpy(np.load("../../data/final_graphs/"+key.split("|||")[0]+".npz")['node_rep'])
