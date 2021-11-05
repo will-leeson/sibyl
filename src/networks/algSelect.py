@@ -1,4 +1,4 @@
-import json, sys
+import json, sys, re, os
 import numpy as np
 from gnn import GAT
 import torch, tqdm, time
@@ -9,7 +9,12 @@ results = json.load(open("../../data/algResults.json"))
 bestVerifier = [[], [], [], []]
 tooBig = []
 
-model = GAT(passes=1, numEdgeSets=2, numAttentionLayers=5, inputLayerSize=155, outputLayerSize=4, mode="cat", k=20, pool="mean").to(0)
+modelPath = sys.argv[1]
+
+passes = int(modelPath.split("time_steps=")[1][0])
+edgeSets = len(re.search(r'\[[A-Z]+_*[A-Z]*_*[A-Z]*\]',modelPath)[0].split("_"))
+
+model = GAT(passes=passes, numEdgeSets=edgeSets, numAttentionLayers=5, inputLayerSize=155, outputLayerSize=4, mode="cat", k=20, pool="mean").to(0)
 
 model.load_state_dict(torch.load(sys.argv[1]))
 model.eval()
@@ -60,11 +65,11 @@ for key in tqdm.tqdm(results):
     if count % 500 == 0:
         print("Percent Correct:",round(correct/possible,3))
 
-json.dump(bestVerifier, open("algcorrect.json", 'w'))
-json.dump(tooBig, open("tooBig.json", 'w'))
+json.dump(bestVerifier, open("algcorrect"+re.findall(r'[0-9]+', modelPath)[-1]+".json", 'w'))
+json.dump(tooBig, open("tooBig"+re.findall(r'[0-9]+', modelPath)[-1]+".json", 'w'))
 
 selection = {"BMC+K":[], "CEGAR":[], "BMC":[], "SymEx":[]}
 for key,i in zip(selection, range(len(bestVerifier))):
     selection[key] = list(np.random.choice(bestVerifier[i], 10, replace=False))
 
-json.dump(selection, open("algSelection.json", 'w'))
+json.dump(selection, open("algSelection"+re.findall(r'[0-9]+', modelPath)[-1]+".json", 'w'))
