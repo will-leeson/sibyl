@@ -16,7 +16,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="GNN Trainer")
 	parser.add_argument("-t", "--time-steps", help="Number of timesteps (Default=0)", default=0, type=int)
 	parser.add_argument("-e", "--epochs", help="Number of training epochs (Default=20)", default=20, type=int)
-	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "CFG"], choices=['AST', 'DFG', "CFG"])
+	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "CFG", "uberEdges"], choices=['AST', 'DFG', "CFG", "uberEdges"])
 	parser.add_argument('-n','--net', help="GGNN, GAT", default="GAT", choices=["GGNN","GAT"])
 	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="cat", choices=['max', 'cat', 'lstm'])
 	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, sort)", default="mean", choices=["max", "mean","add","sort"])
@@ -37,9 +37,9 @@ if __name__ == '__main__':
 	testFiles = json.load(open("../../data/algTestFiles.json"))
 	testLabels = [(key, [item[1] for item in testFiles[key]]) for key in testFiles]
 
-	train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
-	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
-	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
+	train_set = GeometricDataset(trainLabels, "../../data/final_graphs_uber/", args.edge_sets, should_cache=args.cache)
+	val_set = GeometricDataset(valLabels, "../../data/final_graphs_uber/", args.edge_sets, should_cache=args.cache)
+	test_set = GeometricDataset(testLabels, "../../data/final_graphs_uber/", args.edge_sets, should_cache=args.cache)
 	
 	# trainWeights = getWeights(trainLabels)
 	# valWeights = getWeights(valLabels)
@@ -47,6 +47,7 @@ if __name__ == '__main__':
 	if args.net == 'GGNN':
 		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=args.gpu)
 	else:
+		print(args.edge_sets)
 		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, pool=args.pool_type).to(device=args.gpu)
 
 	if args.task == "rank":
