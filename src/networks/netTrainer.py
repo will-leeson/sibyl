@@ -16,7 +16,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="GNN Trainer")
 	parser.add_argument("-t", "--time-steps", help="Number of timesteps (Default=0)", default=0, type=int)
 	parser.add_argument("-e", "--epochs", help="Number of training epochs (Default=20)", default=20, type=int)
-	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "CFG"], choices=['AST', 'DFG', "CFG"])
+	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "CFG", "uberEdges"], choices=['AST', 'DFG', "CFG", "uberEdges"])
 	parser.add_argument("-p", "--problem-types", help="Which problem types to consider:termination, overflow, reachSafety, memSafety (Default=All)", nargs="+", default=['termination', 'overflow', 'reachSafety', 'memSafety'], choices=['termination', 'overflow', 'reachSafety', 'memSafety'])
 	parser.add_argument('-n','--net', help="GGNN, GAT", default="GAT", choices=["GGNN","GAT"])
 	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="cat", choices=['max', 'cat', 'lstm'])
@@ -48,9 +48,9 @@ if __name__ == '__main__':
 		valLabels = groupLabels(valLabels)
 		testLabels = groupLabels(testLabels)
 
-	train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
-	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
-	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
+	train_set = GeometricDataset(trainLabels, "../../data/final_graphs_uber/", args.edge_sets, should_cache=args.cache)
+	val_set = GeometricDataset(valLabels, "../../data/final_graphs_uber/", args.edge_sets, should_cache=args.cache)
+	test_set = GeometricDataset(testLabels, "../../data/final_graphs_uber/", args.edge_sets, should_cache=args.cache)
 
 	#getWeights(trainLabels)
 
