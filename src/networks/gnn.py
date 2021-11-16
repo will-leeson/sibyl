@@ -81,7 +81,7 @@ class GAT(torch.nn.Module):
             self.pool = global_sort_pool
             self.k = k
         elif pool == "attention":
-            self.pool = GlobalAttention(gate_nn=nn.Sequential(torch.nn.Linear(fcInputLayerSize-1, 1), nn.Tanh()))
+            self.pool = GlobalAttention(gate_nn=nn.Sequential(torch.nn.Linear(fcInputLayerSize-1, fcInputLayerSize//2), nn.LeakyReLU(), torch.nn.Linear(fcInputLayerSize//2, fcInputLayerSize//2), nn.LeakyReLU(), torch.nn.Linear(fcInputLayerSize//2, 1), nn.Tanh()))
         # elif pool == "multiSet":
         #     self.pool = GraphMultisetTransformer(in_channels=fcInputLayerSize, hidden_channels=)
         else:
