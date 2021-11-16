@@ -48,9 +48,9 @@ if __name__ == '__main__':
 		valLabels = groupLabels(valLabels)
 		testLabels = groupLabels(testLabels)
 
-	train_set = GeometricDataset(trainLabels, "../../data/final_graphs_uber/", args.edge_sets, should_cache=args.cache)
-	val_set = GeometricDataset(valLabels, "../../data/final_graphs_uber/", args.edge_sets, should_cache=args.cache)
-	test_set = GeometricDataset(testLabels, "../../data/final_graphs_uber/", args.edge_sets, should_cache=args.cache)
+	train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
+	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
+	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
 
 	#getWeights(trainLabels)
 

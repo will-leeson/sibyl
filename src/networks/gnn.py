@@ -3,7 +3,7 @@ import torch
 from torch._C import Value
 import torch.nn as nn
 import torch.nn.functional as f
-from torch_geometric.nn import GATv2Conv, GatedGraphConv, JumpingKnowledge, global_max_pool, global_mean_pool, global_add_pool, global_sort_pool, GlobalAttention, GraphMultisetTransformer
+from torch_geometric.nn import GATv2Conv, GatedGraphConv, JumpingKnowledge, global_max_pool, global_mean_pool, global_add_pool, global_sort_pool, GlobalAttention#, GraphMultisetTransformer
 from torch_geometric.nn.conv.gat_conv import GATConv
 '''
 File - ggnn.py
@@ -63,7 +63,7 @@ class GAT(torch.nn.Module):
         self.k = 1
         self.shouldJump = shouldJump
             
-        self.gats = nn.ModuleList([nn.ModuleList([GATv2Conv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False) for _ in range(numEdgeSets)]) for i in range(passes)])
+        self.gats = nn.ModuleList([GATv2Conv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False, edge_dim=1) for i in range(passes)])
         if self.passes and self.shouldJump:
            self.jump = JumpingKnowledge(self.mode, channels=inputLayerSize, num_layers=self.passes)
         if self.mode == 'cat' and self.shouldJump:
@@ -97,12 +97,11 @@ class GAT(torch.nn.Module):
                 xs = [x]
 
             for gat in self.gats: 
-                placeholderX = torch.zeros_like(x)
-                for val, gatA in zip(torch.unique(edge_attr), gat):
-                    corr_edges = edge_index.transpose(0,1)[(edge_attr==val).squeeze()].transpose(0,1)
-                    out = gatA(x, corr_edges)
-                    placeholderX += f.leaky_relu(out)
-                x = placeholderX/len(torch.unique(edge_attr))
+                # placeholderX = torch.zeros_like(x)
+                # for val, gatA in zip(torch.unique(edge_attr), gat):
+                    # corr_edges = edge_index.transpose(0,1)[(edge_attr==val).squeeze()].transpose(0,1)
+                out = gat(x, edge_index, edge_attr=edge_attr)
+                x += f.leaky_relu(out)
                 if self.shouldJump:
                     xs += [x]
 

@@ -39,7 +39,7 @@ class GeometricDataset(GDataset):
 
             edges_tensor = [torch.from_numpy(edges[edgeSet]) for edgeSet in self.edge_sets]
 
-            edge_labels = torch.cat([torch.full((len(edges_tensor[i]),1),i) for i in range(len(edges_tensor))], dim=0)        
+            edge_labels = torch.cat([torch.full((len(edges_tensor[i]),1),i) for i in range(len(edges_tensor))], dim=0).float()        
             edges_tensor = torch.cat(edges_tensor).transpose(0,1).long()
 
             data = np.load(path)
