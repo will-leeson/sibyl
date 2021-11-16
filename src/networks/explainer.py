@@ -53,8 +53,9 @@ if __name__ == '__main__':
 	if args.net == 'GGNN':
 		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(0)
 	else:
-		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=nodes.size(1), outputLayerSize=3, mode=args.mode, k=20, pool=args.pool_type).to(0)
+		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=nodes.size(1), outputLayerSize=4, mode=args.mode, k=20, pool=args.pool_type).to(0)
 
+	print(model)
 	model.load_state_dict(torch.load(args.model_path))
 	model.eval()
 
