@@ -1,0 +1,98 @@
+   BENCHMARK INFORMATION
+benchmark definition:    /p/graves/symExE.xml
+name:                    symExE
+run sets:                sv-comp18.ReachSafety-Arrays
+date:                    Wed, 2021-10-27 14:31:30 EDT
+tool:                    CPAchecker 2.0.1-svn-ce9cea8+
+tool executable:         ./cpa.sh
+options:                 -symbolicExecution -heap 10000M -benchmark -timelimit 900s
+resource limits:
+- memory:                15000.0 MB
+- time:                  900 s
+- cpu cores:             8
+hardware requirements:
+- cpu cores:             8
+- memory:                15000.0 MB
+------------------------------------------------------------
+
+   SYSTEM INFORMATION
+host:                    doppio02
+os:                      Linux-3.10.0-1127.el7.x86_64-x86_64-with-centos-7.8.2003-Core
+cpu:                     Intel Xeon Gold 6130 CPU @ 2.10GHz
+- cores:                 64
+- max frequency:         3700.0 MHz
+- turbo boost enabled:   True
+ram:                     134655.91808 MB
+------------------------------------------------------------
+
+
+
+sv-comp18.ReachSafety-Arrays
+Run set 1 of 1 with options '-symbolicExecution -heap 10000M -benchmark -timelimit 900s' and propertyfile 'None'
+
+inputfile                                                                                                           status                       cpu time   wall time        host
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+linux-3.14__complex_emg__linux-usb-dev__drivers-net-wireless-airo_true-unreach-call.cil.c                           TIMEOUT                        901.61      839.87        None
+linux-3.14__complex_emg__linux-usb-dev__drivers-net-wireless-b43legacy-b43legacy_true-unreach-call.cil.c            TIMEOUT                        902.11      853.17        None
+linux-3.14__complex_emg__linux-usb-dev__drivers-net-wireless-ipw2x00-ipw2100_true-unreach-call.cil.c                TIMEOUT                        903.83      757.94        None
+linux-3.14__complex_emg__linux-usb-dev__drivers-net-wireless-ipw2x00-ipw2200_true-unreach-call.cil.c                TIMEOUT                        903.25      806.17        None
+linux-3.14__complex_emg__linux-usb-dev__drivers-net-wireless-libertas-libertas_true-unreach-call.cil.c              TIMEOUT                        902.15      874.15        None
+linux-3.14__complex_emg__linux-usb-dev__drivers-net-wireless-mwifiex-mwifiex_true-unreach-call.cil.c                TIMEOUT                        902.13      849.62        None
+linux-3.14__complex_emg__linux-usb-dev__drivers-net-wireless-rndis_wlan_true-unreach-call.cil.c                     TIMEOUT                        902.27      792.26        None
+linux-3.14__complex_emg__linux-usb-dev__drivers-net-wireless-rtlwifi-rtl8188ee-rtl8188ee_true-unreach-call.cil.c    TIMEOUT                        902.65      843.11        None
+linux-3.14__complex_emg__linux-usb-dev__drivers-net-wireless-rtlwifi-rtl8192de-rtl8192de_true-unreach-call.cil.c    TIMEOUT                        902.28      850.82        None
+linux-3.14__complex_emg__linux-usb-dev__drivers-net-wireless-rtlwifi-rtl8192se-rtl8192se_true-unreach-call.cil.c    TIMEOUT                        902.95      835.03        None
+linux-3.14__complex_emg__linux-usb-dev__drivers-net-wireless-rtlwifi-rtl8723ae-rtl8723ae_true-unreach-call.cil.c    TIMEOUT                        902.16      779.40        None
+linux-3.14__linux-alloc-spinlock__drivers-media-i2c-cx25840-cx25840_true-unreach-call.cil.c                         TIMEOUT                        904.49      645.70        None
+linux-3.14__linux-alloc-spinlock__drivers-media-pci-saa7164-saa7164_true-unreach-call.cil.c                         TIMEOUT                        909.97      814.63        None
+linux-3.14__linux-alloc-spinlock__drivers-media-usb-gspca-gspca_topro_true-unreach-call.cil.c                       TIMEOUT                        903.73      757.64        None
+linux-3.14__linux-alloc-spinlock__drivers-net-ethernet-broadcom-bnx2_true-unreach-call.cil.c                        TIMEOUT                        902.98      692.35        None
+linux-3.14__linux-alloc-spinlock__drivers-net-ethernet-chelsio-cxgb3-cxgb3_true-unreach-call.cil.c                  TIMEOUT                        903.18      866.29        None
+linux-3.14__linux-alloc-spinlock__drivers-net-ethernet-chelsio-cxgb4-cxgb4_true-unreach-call.cil.c                  TIMEOUT                        902.90      811.58        None
+linux-3.14__linux-alloc-spinlock__drivers-net-ethernet-intel-i40e-i40e_true-unreach-call.cil.c                      TIMEOUT                        903.58      702.42        None
+linux-3.14__linux-alloc-spinlock__drivers-net-ethernet-intel-ixgbe-ixgbe_true-unreach-call.cil.c                    ERROR (recursion)               46.76       18.12        None
+linux-3.14__linux-alloc-spinlock__drivers-net-ethernet-marvell-skge_true-unreach-call.cil.c                         TIMEOUT                        909.43      703.36        None
+linux-3.14__linux-alloc-spinlock__drivers-net-ethernet-myricom-myri10ge-myri10ge_true-unreach-call.cil.c            TIMEOUT                        901.72      762.11        None
+linux-3.14__linux-alloc-spinlock__drivers-net-ethernet-sun-sunhme_true-unreach-call.cil.c                           TIMEOUT                        901.50      883.23        None
+linux-3.14__linux-alloc-spinlock__drivers-net-ethernet-ti-tlan_true-unreach-call.cil.c                              TIMEOUT                        904.63      591.04        None
+linux-3.14__linux-alloc-spinlock__drivers-net-fddi-skfp-skfp_true-unreach-call.cil.c                                TIMEOUT                        913.09      792.61        None
+linux-3.14__linux-alloc-spinlock__drivers-net-irda-via-ircc_true-unreach-call.cil.c                                 TIMEOUT                        907.61      740.16        None
+linux-3.14__linux-alloc-spinlock__drivers-net-wireless-airo_true-unreach-call.cil.c                                 TIMEOUT                        904.66      748.54        None
+linux-3.14__linux-alloc-spinlock__drivers-net-wireless-b43legacy-b43legacy_true-unreach-call.cil.c                  TIMEOUT                        902.16      860.39        None
+linux-3.14__linux-alloc-spinlock__drivers-net-wireless-rtlwifi-rtl8188ee-rtl8188ee_true-unreach-call.cil.c          ERROR (recursion)              205.33      177.89        None
+linux-3.14__linux-alloc-spinlock__drivers-net-wireless-rtlwifi-rtl8723ae-rtl8723ae_true-unreach-call.cil.c          ERROR (recursion)               76.17       51.84        None
+linux-3.14__linux-drivers-clk1__drivers-media-i2c-cx25840-cx25840_true-unreach-call.cil.c                           TIMEOUT                        907.89      656.26        None
+linux-3.14__linux-drivers-clk1__drivers-media-pci-saa7164-saa7164_true-unreach-call.cil.c                           TIMEOUT                        906.33      837.36        None
+linux-3.14__linux-drivers-clk1__drivers-media-usb-gspca-gspca_topro_true-unreach-call.cil.c                         TIMEOUT                        903.30      730.81        None
+linux-3.14__linux-drivers-clk1__drivers-net-ethernet-broadcom-bnx2_true-unreach-call.cil.c                          TIMEOUT                        903.89      668.90        None
+linux-3.14__linux-drivers-clk1__drivers-net-ethernet-broadcom-tg3_true-unreach-call.cil.c                           TIMEOUT                        905.15      801.72        None
+linux-3.14__linux-drivers-clk1__drivers-net-ethernet-chelsio-cxgb3-cxgb3_true-unreach-call.cil.c                    TIMEOUT                        903.01      865.39        None
+linux-3.14__linux-drivers-clk1__drivers-net-ethernet-emulex-benet-be2net_true-unreach-call.cil.c                    TIMEOUT                        907.15      757.43        None
+linux-3.14__linux-drivers-clk1__drivers-net-ethernet-intel-e1000-e1000_true-unreach-call.cil.c                      TIMEOUT                        906.23      733.32        None
+linux-3.14__linux-drivers-clk1__drivers-net-ethernet-intel-i40e-i40e_true-unreach-call.cil.c                        TIMEOUT                        914.66      706.74        None
+linux-3.14__linux-drivers-clk1__drivers-net-ethernet-intel-ixgbe-ixgbe_true-unreach-call.cil.c                      ERROR (recursion)               46.80       17.35        None
+linux-3.14__linux-drivers-clk1__drivers-net-ethernet-nvidia-forcedeth_true-unreach-call.cil.c                       TIMEOUT                        901.88      869.42        None
+linux-3.14__linux-drivers-clk1__drivers-net-ethernet-ti-tlan_true-unreach-call.cil.c                                TIMEOUT                        904.36      695.79        None
+linux-3.14__linux-drivers-clk1__drivers-net-fddi-skfp-skfp_true-unreach-call.cil.c                                  TIMEOUT                        906.16      595.02        None
+linux-3.14__linux-drivers-clk1__drivers-net-wireless-airo_true-unreach-call.cil.c                                   TIMEOUT                        909.87      758.21        None
+linux-3.14__linux-drivers-clk1__drivers-net-wireless-b43legacy-b43legacy_true-unreach-call.cil.c                    TIMEOUT                        905.77      855.61        None
+linux-3.14__linux-drivers-clk1__drivers-net-wireless-ipw2x00-ipw2100_true-unreach-call.cil.c                        TIMEOUT                        905.00      714.77        None
+linux-3.14__linux-drivers-clk1__drivers-net-wireless-mwifiex-mwifiex_true-unreach-call.cil.c                        TIMEOUT                        900.94      869.71        None
+linux-3.14__linux-drivers-clk1__drivers-net-wireless-rtlwifi-rtl8723ae-rtl8723ae_true-unreach-call.cil.c            ERROR (recursion)               64.75       41.97        None
+linux-3.14__linux-kernel-locking-mutex__drivers-media-i2c-cx25840-cx25840_true-unreach-call.cil.c                   TIMEOUT                        904.70      640.59        None
+linux-3.14__linux-kernel-locking-mutex__drivers-media-pci-saa7164-saa7164_true-unreach-call.cil.c                   TIMEOUT                        906.43      851.11        None
+linux-3.14__linux-kernel-locking-mutex__drivers-media-usb-em28xx-em28xx_true-unreach-call.cil.c                     TIMEOUT                        901.08      876.55        None
+linux-3.14__linux-kernel-locking-mutex__drivers-media-usb-gspca-gspca_ov519_true-unreach-call.cil.c                 TIMEOUT                        902.87      763.53        None
+linux-3.14__linux-kernel-locking-mutex__drivers-media-usb-gspca-gspca_topro_true-unreach-call.cil.c                 TIMEOUT                        903.68      754.56        None
+linux-3.14__linux-kernel-locking-mutex__drivers-net-ethernet-broadcom-bnx2_true-unreach-call.cil.c                  TIMEOUT                        904.56      733.64        None
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Run set 1                                                                                                           done                         43857.99    37506.05           -
+
+Statistics:             53 Files
+  correct:               0
+    correct true:        0
+    correct false:       0
+  incorrect:             0
+    incorrect true:      0
+    incorrect false:     0
+  unknown:              53

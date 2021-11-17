@@ -1,0 +1,98 @@
+   BENCHMARK INFORMATION
+benchmark definition:    /p/graves/symExG.xml
+name:                    symExG
+run sets:                sv-comp18.ReachSafety-Arrays
+date:                    Wed, 2021-10-27 14:34:37 EDT
+tool:                    CPAchecker 2.0.1-svn-ce9cea8+
+tool executable:         ./cpa.sh
+options:                 -symbolicExecution -heap 10000M -benchmark -timelimit 900s
+resource limits:
+- memory:                15000.0 MB
+- time:                  900 s
+- cpu cores:             8
+hardware requirements:
+- cpu cores:             8
+- memory:                15000.0 MB
+------------------------------------------------------------
+
+   SYSTEM INFORMATION
+host:                    doppio04
+os:                      Linux-3.10.0-1127.el7.x86_64-x86_64-with-centos-7.8.2003-Core
+cpu:                     Intel Xeon Gold 6130 CPU @ 2.10GHz
+- cores:                 64
+- max frequency:         3700.0 MHz
+- turbo boost enabled:   True
+ram:                     134655.91808 MB
+------------------------------------------------------------
+
+
+
+sv-comp18.ReachSafety-Arrays
+Run set 1 of 1 with options '-symbolicExecution -heap 10000M -benchmark -timelimit 900s' and propertyfile 'None'
+
+inputfile                                                                                                                  status                       cpu time   wall time        host
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ldv-linux-3.14/linux-3.14__linux-usb-dev__drivers-net-fddi-skfp-skfp_true-unreach-call.cil.c                               TIMEOUT                        910.23      696.92        None
+ldv-linux-3.14/linux-3.14__linux-usb-dev__drivers-net-irda-via-ircc_true-unreach-call.cil.c                                TIMEOUT                        903.83      768.50        None
+ldv-linux-3.14/linux-3.14__linux-usb-dev__drivers-net-wireless-airo_true-unreach-call.cil.c                                TIMEOUT                        904.54      672.48        None
+ldv-linux-3.14/linux-3.14__linux-usb-dev__drivers-net-wireless-b43legacy-b43legacy_true-unreach-call.cil.c                 TIMEOUT                        902.32      846.36        None
+ldv-linux-3.14/linux-3.14__linux-usb-dev__drivers-net-wireless-ipw2x00-ipw2100_true-unreach-call.cil.c                     TIMEOUT                        902.48      632.89        None
+ldv-linux-3.14/linux-3.14__linux-usb-dev__drivers-net-wireless-ipw2x00-ipw2200_true-unreach-call.cil.c                     TIMEOUT                        901.94      816.41        None
+ldv-linux-3.14/linux-3.14__linux-usb-dev__drivers-net-wireless-mwifiex-mwifiex_true-unreach-call.cil.c                     TIMEOUT                        901.66      875.47        None
+ldv-linux-3.14/linux-3.14__linux-usb-dev__drivers-net-wireless-rtlwifi-rtl8723ae-rtl8723ae_true-unreach-call.cil.c         ERROR (recursion)               40.30       18.49        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--atm--fore_200e.ko_false-unreach-call.cil.c                                  false(unreach-call)             19.02        4.58        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--block--mtip32xx--mtip32xx.ko_false-unreach-call.cil.c                       false(unreach-call)            328.44      272.81        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--block--nvme.ko_false-unreach-call.cil.c                                     TIMEOUT                        903.54      818.02        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--block--paride--pf.ko_false-unreach-call.cil.c                               false(unreach-call)             18.53        4.65        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--block--rsxx--rsxx.ko_false-unreach-call.cil.c                               TIMEOUT                        902.27      731.19        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--block--skd.ko_false-unreach-call.cil.c                                      TIMEOUT                        904.77      790.87        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--block--virtio_blk.ko_false-unreach-call.cil.c                               TIMEOUT                        902.87      463.49        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--block--xen-blkfront.ko_false-unreach-call.cil.c                             TIMEOUT                        901.81      868.98        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--firewire--firewire-core.ko_false-unreach-call.cil.c                         TIMEOUT                        903.82      818.87        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--gpu--drm--ast--ast.ko_false-unreach-call.cil.c                              TIMEOUT                        904.34      741.22        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--gpu--drm--qxl--qxl.ko_false-unreach-call.cil.c                              TIMEOUT                        913.74      793.33        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--hid--hid-wiimote.ko_false-unreach-call.cil.c                                ERROR (recursion)               36.55       14.43        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--hid--usbhid--usbhid.ko_false-unreach-call.cil.c                             TIMEOUT                        903.22      802.65        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--ide--ide-core.ko_false-unreach-call.cil.c                                   TIMEOUT                        906.91      659.74        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--iio--accel--kxcjk-1013.ko_false-unreach-call.cil.c                          TIMEOUT                        902.38      746.14        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--infiniband--ulp--srp--ib_srp.ko_false-unreach-call.cil.c                    false(unreach-call)             21.42        5.58        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--input--misc--ims-pcu.ko_false-unreach-call.cil.c                            TIMEOUT                        901.25      787.08        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--input--touchscreen--elants_i2c.ko_false-unreach-call.cil.c                  TIMEOUT                        901.72      674.65        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--input--touchscreen--usbtouchscreen.ko_false-unreach-call.cil.c              false(unreach-call)             34.06       11.64        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--md--raid456.ko_false-unreach-call.cil.c                                     TIMEOUT                        904.47      755.10        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--media--dvb-core--dvb-core.ko_false-unreach-call.cil.c                       false(unreach-call)             59.44       24.89        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--media--usb--gspca--gspca_main.ko_false-unreach-call.cil.c                   false(unreach-call)            201.66      171.52        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--media--usb--ttusb-budget--dvb-ttusb-budget.ko_false-unreach-call.cil.c      TIMEOUT                        911.15      670.69        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--media--usb--uvc--uvcvideo.ko_false-unreach-call.cil.c                       TIMEOUT                        905.51      626.84        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--memstick--core--ms_block.ko_false-unreach-call.cil.c                        false(unreach-call)             17.05        4.21        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--memstick--core--mspro_block.ko_false-unreach-call.cil.c                     false(unreach-call)             15.89        3.86        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--misc--mic--host--mic_host.ko_false-unreach-call.cil.c                       ERROR (recursion)               20.37        5.49        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--misc--sgi-gru--gru.ko_false-unreach-call.cil.c                              TIMEOUT                        901.85      875.08        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--mtd--sm_ftl.ko_false-unreach-call.cil.c                                     TIMEOUT                        902.56      843.06        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--mtd--ubi--ubi.ko_false-unreach-call.cil.c                                   false(unreach-call)             34.76       14.81        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--can--janz-ican3.ko_false-unreach-call.cil.c                            false(unreach-call)             52.50       14.72        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--ethernet--8390--pcnet_cs.ko_false-unreach-call.cil.c                   false(unreach-call)             32.65       14.83        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--ethernet--atheros--alx--alx.ko_false-unreach-call.cil.c                TIMEOUT                        905.95      646.25        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--ethernet--broadcom--tg3.ko_false-unreach-call.cil.c                    false(unreach-call)             36.50       12.20        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--ethernet--cisco--enic--enic.ko_false-unreach-call.cil.c                false(unreach-call)             34.26        9.32        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--ethernet--intel--i40evf--i40evf.ko_false-unreach-call.cil.c            TIMEOUT                        904.87      596.92        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--ethernet--qlogic--netxen--netxen_nic.ko_false-unreach-call.cil.c       TIMEOUT                        902.33      860.79        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--ethernet--qlogic--qlge--qlge.ko_false-unreach-call.cil.c               false(unreach-call)             32.53        9.61        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--ethernet--smsc--smc91c92_cs.ko_false-unreach-call.cil.c                false(unreach-call)             25.35        6.89        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--ppp--ppp_generic.ko_false-unreach-call.cil.c                           false(unreach-call)            389.00      350.43        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--team--team.ko_false-unreach-call.cil.c                                 TIMEOUT                        901.25      874.13        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--usb--kaweth.ko_false-unreach-call.cil.c                                TIMEOUT                        905.35      684.89        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--wireless--ath--ar5523--ar5523.ko_false-unreach-call.cil.c              false(unreach-call)             25.19        6.75        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--net--wireless--rtlwifi--rtl8192de--rtl8192de.ko_false-unreach-call.cil.c    TIMEOUT                        903.91      860.56        None
+ldv-linux-4.0-rc1-mav/linux-4.0-rc1---drivers--nfc--port100.ko_false-unreach-call.cil.c                                    false(unreach-call)             15.95        4.16        None
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Run set 1                                                                                                                  done                         29520.52    24294.40           -
+
+Statistics:             53 Files
+  correct:               0
+    correct true:        0
+    correct false:       0
+  incorrect:             0
+    incorrect true:      0
+    incorrect false:     0
+  unknown:              34

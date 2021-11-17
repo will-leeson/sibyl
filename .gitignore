@@ -2,6 +2,9 @@
 data/sv-results/**
 data/sv-comp/**
 data/sv-benchmarks/**
+data/graphs/*
+data/graphs21/*
+data/raw21/*
 paperSummaries
 qualsIdea
 **/__pychache__

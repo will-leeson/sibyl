@@ -1,0 +1,87 @@
+./cpa.sh -symbolicExecution -heap 10000M -benchmark -timelimit 900s -64 -stats -spec /u/wel2vw/sv-benchmarks/c/Systems_DeviceDriversLinux64_ReachSafety.prp /u/wel2vw/sv-benchmarks/c/ldv-linux-3.14/linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-net-hippi-rrunner_true-unreach-call.cil.c
+
+
+--------------------------------------------------------------------------------
+
+
+Running CPAchecker with Java heap of size 10000M.
+Running CPAchecker with default stack size (1024k). Specify a larger value with -stack if needed.
+Running CPAchecker with the following extra VM options:  -Djava.io.tmpdir=/tmp/BenchExec_run_1q2zufq5/tmp
+Language C detected and set for analysis (CPAMain.detectFrontendLanguageIfNecessary, INFO)
+
+Using the following resource limits: CPU-time limit of 900s (ResourceLimitChecker.fromConfiguration, INFO)
+
+CPAchecker 1.9 / symbolicExecution (Java HotSpot(TM) 64-Bit Server VM 11.0.1) started (CPAchecker.run, INFO)
+
+Parsing CFA from file(s) "/u/wel2vw/sv-benchmarks/c/ldv-linux-3.14/linux-3.14__complex_emg__linux-kernel-locking-spinlock__drivers-net-hippi-rrunner_true-unreach-call.cil.c" (CPAchecker.parse, INFO)
+
+line 5919: Dead code detected: return (1); (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 9271: Dead code detected: Goto: case_1 (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 9276: Dead code detected: Goto: case_2 (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 9286: Dead code detected: Goto: case_8 (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 9290: Dead code detected: Goto: switch_default (CFACreationUtils.addEdgeToCFA, INFO)
+
+Dead code detected: Label switch_break is not reachable. (CFAFunctionBuilder.leave, INFO)
+
+Dead code detected: Label switch_default is not reachable. (CFAFunctionBuilder.leave, INFO)
+
+Dead code detected: Label case_8 is not reachable. (CFAFunctionBuilder.leave, INFO)
+
+Dead code detected: Label case_1 is not reachable. (CFAFunctionBuilder.leave, INFO)
+
+Dead code detected: Label case_2 is not reachable. (CFAFunctionBuilder.leave, INFO)
+
+line 9508: Dead code detected: return (arg0); (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 9553: Dead code detected: return (arg0); (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 9948: Dead code detected: return; (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 9961: Dead code detected: return; (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 10522: Dead code detected: return; (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 10564: Dead code detected: return (arg0); (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 10565: Dead code detected: return (arg0); (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 10610: Dead code detected: return (arg0); (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 10899: Dead code detected: return; (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 10948: Dead code detected: return (ldv_func_res); (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 11075: Dead code detected: return (ldv_func_res); (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 11115: Dead code detected: return (ldv_func_res); (CFACreationUtils.addEdgeToCFA, INFO)
+
+line 11181: Dead code detected: return (ldv_func_res); (CFACreationUtils.addEdgeToCFA, INFO)
+
+Inline assembler ignored, analysis is probably unsound! (CFABuilder.createCFA, WARNING)
+
+line 6502: Function pointer *(ops->alloc) with type void *(*)(struct device *, size_t , dma_addr_t *, gfp_t , struct dma_attrs *) is called, but no possible target functions were found. (CFunctionPointerResolver.getTargets, WARNING)
+
+line 6543: Function pointer *(ops->free) with type void (*)(struct device *, size_t , void *, dma_addr_t , struct dma_attrs *) is called, but no possible target functions were found. (CFunctionPointerResolver.getTargets, WARNING)
+
+line 6297: Function pointer *(ops->map_page) with type dma_addr_t (*)(struct device *, struct page *, unsigned long, size_t , enum dma_data_direction , struct dma_attrs *) is called, but no possible target functions were found. (CFunctionPointerResolver.getTargets, WARNING)
+
+line 6376: Function pointer *(ops->sync_single_for_cpu) with type void (*)(struct device *, dma_addr_t , size_t , enum dma_data_direction ) is called, but no possible target functions were found. (CFunctionPointerResolver.getTargets, WARNING)
+
+line 6416: Function pointer *(ops->sync_single_for_device) with type void (*)(struct device *, dma_addr_t , size_t , enum dma_data_direction ) is called, but no possible target functions were found. (CFunctionPointerResolver.getTargets, WARNING)
+
+line 6336: Function pointer *(ops->unmap_page) with type void (*)(struct device *, dma_addr_t , size_t , enum dma_data_direction , struct dma_attrs *) is called, but no possible target functions were found. (CFunctionPointerResolver.getTargets, WARNING)
+
+line 10215: Function pointer *arg0 with type int (*)(struct pci_dev *) is called, but no possible target functions were found. (CFunctionPointerResolver.getTargets, WARNING)
+
+line 10226: Function pointer *arg0 with type int (*)(struct pci_dev *) is called, but no possible target functions were found. (CFunctionPointerResolver.getTargets, WARNING)
+
+line 10249: Function pointer *arg0 with type int (*)(struct pci_dev *, struct pm_message ) is called, but no possible target functions were found. (CFunctionPointerResolver.getTargets, WARNING)
+
+line 10261: Function pointer *arg0 with type int (*)(struct pci_dev *, struct pm_message ) is called, but no possible target functions were found. (CFunctionPointerResolver.getTargets, WARNING)
+
+Starting analysis ... (CPAchecker.runAlgorithm, INFO)
+

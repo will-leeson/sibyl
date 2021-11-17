@@ -1,0 +1,5 @@
+kInd
+ymex
+pred
+alue
+alue-cegar

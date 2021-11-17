@@ -1,0 +1,98 @@
+   BENCHMARK INFORMATION
+benchmark definition:    /p/graves/symExH.xml
+name:                    symExH
+run sets:                sv-comp18.ReachSafety-Arrays
+date:                    Wed, 2021-10-27 14:36:38 EDT
+tool:                    CPAchecker 2.0.1-svn-ce9cea8+
+tool executable:         ./cpa.sh
+options:                 -symbolicExecution -heap 10000M -benchmark -timelimit 900s
+resource limits:
+- memory:                15000.0 MB
+- time:                  900 s
+- cpu cores:             8
+hardware requirements:
+- cpu cores:             8
+- memory:                15000.0 MB
+------------------------------------------------------------
+
+   SYSTEM INFORMATION
+host:                    doppio05
+os:                      Linux-3.10.0-1127.el7.x86_64-x86_64-with-centos-7.8.2003-Core
+cpu:                     Intel Xeon Gold 6130 CPU @ 2.10GHz
+- cores:                 64
+- max frequency:         3700.0 MHz
+- turbo boost enabled:   True
+ram:                     134655.91808 MB
+------------------------------------------------------------
+
+
+
+sv-comp18.ReachSafety-Arrays
+Run set 1 of 1 with options '-symbolicExecution -heap 10000M -benchmark -timelimit 900s' and propertyfile 'None'
+
+inputfile                                                                                           status                       cpu time   wall time        host
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+linux-4.0-rc1---drivers--scsi--aacraid--aacraid.ko_false-unreach-call.cil.c                         TIMEOUT                        902.28      466.85        None
+linux-4.0-rc1---drivers--scsi--advansys.ko_false-unreach-call.cil.c                                 false(unreach-call)             34.56        9.04        None
+linux-4.0-rc1---drivers--scsi--be2iscsi--be2iscsi.ko_false-unreach-call.cil.c                       TIMEOUT                        902.26      499.88        None
+linux-4.0-rc1---drivers--scsi--esas2r--esas2r.ko_false-unreach-call.cil.c                           TIMEOUT                        902.72      338.16        None
+linux-4.0-rc1---drivers--scsi--hpsa.ko_false-unreach-call.cil.c                                     false(unreach-call)             24.24        7.29        None
+linux-4.0-rc1---drivers--scsi--megaraid.ko_false-unreach-call.cil.c                                 false(unreach-call)             48.49       24.16        None
+linux-4.0-rc1---drivers--scsi--mvsas--mvsas.ko_false-unreach-call.cil.c                             TIMEOUT                        911.86      732.90        None
+linux-4.0-rc1---drivers--scsi--pm8001--pm80xx.ko_false-unreach-call.cil.c                           false(unreach-call)             60.40       28.74        None
+linux-4.0-rc1---drivers--scsi--pmcraid.ko_false-unreach-call.cil.c                                  false(unreach-call)             20.93        5.21        None
+linux-4.0-rc1---drivers--scsi--qla4xxx--qla4xxx.ko_false-unreach-call.cil.c                         ERROR (recursion)               23.57        5.70        None
+linux-4.0-rc1---drivers--scsi--sg.ko_false-unreach-call.cil.c                                       false(unreach-call)             78.04       32.26        None
+linux-4.0-rc1---drivers--staging--dgnc--dgnc.ko_false-unreach-call.cil.c                            TIMEOUT                        908.60      461.55        None
+linux-4.0-rc1---drivers--staging--ozwpan--ozwpan.ko_false-unreach-call.cil.c                        TIMEOUT                        901.65      833.68        None
+linux-4.0-rc1---drivers--usb--class--cdc-wdm.ko_false-unreach-call.cil.c                            TIMEOUT                        900.80      874.78        None
+linux-4.0-rc1---drivers--usb--gadget--udc--net2272.ko_false-unreach-call.cil.c                      false(unreach-call)             26.40        8.06        None
+linux-4.0-rc1---drivers--usb--gadget--udc--pch_udc.ko_false-unreach-call.cil.c                      false(unreach-call)            436.27      359.06        None
+linux-4.0-rc1---drivers--usb--host--isp116x-hcd.ko_false-unreach-call.cil.c                         TIMEOUT                        901.79      722.01        None
+linux-4.0-rc1---drivers--usb--misc--iowarrior.ko_false-unreach-call.cil.c                           TIMEOUT                        903.01      517.53        None
+linux-4.0-rc1---drivers--usb--misc--legousbtower.ko_false-unreach-call.cil.c                        TIMEOUT                        905.06      404.23        None
+linux-4.0-rc1---drivers--usb--misc--uss720.ko_false-unreach-call.cil.c                              ERROR (recursion)              134.32       67.10        None
+linux-4.0-rc1---drivers--usb--misc--yurex.ko_false-unreach-call.cil.c                               false(unreach-call)             70.43       26.84        None
+linux-4.0-rc1---drivers--usb--musb--musb_hdrc.ko_false-unreach-call.cil.c                           TIMEOUT                        902.70      798.38        None
+linux-4.0-rc1---drivers--video--fbdev--core--fb.ko_false-unreach-call.cil.c                         false(unreach-call)             46.49       25.05        None
+linux-4.0-rc1---drivers--video--fbdev--s3fb.ko_false-unreach-call.cil.c                             TIMEOUT                        907.22      757.97        None
+linux-4.0-rc1---drivers--video--fbdev--udlfb.ko_false-unreach-call.cil.c                            TIMEOUT                        901.63      879.55        None
+linux-4.0-rc1---fs--ncpfs--ncpfs.ko_false-unreach-call.cil.c                                        TIMEOUT                        903.61      842.10        None
+linux-4.0-rc1---kernel--locking--locktorture.ko_false-unreach-call.cil.c                            TIMEOUT                        902.78      848.83        None
+linux-4.0-rc1---net--netfilter--nf_tables.ko_false-unreach-call.cil.c                               TIMEOUT                        905.85      766.39        None
+linux-4.0-rc1---net--netfilter--nfnetlink_log.ko_false-unreach-call.cil.c                           TIMEOUT                        901.36      873.55        None
+linux-4.0-rc1---sound--core--seq--oss--snd-seq-oss.ko_false-unreach-call.cil.c                      TIMEOUT                        901.34      861.53        None
+linux-4.0-rc1---sound--pci--ice1712--snd-ice1724.ko_false-unreach-call.cil.c                        TIMEOUT                        901.81      868.62        None
+linux-4.0-rc1---drivers--char--ipmi--ipmi_msghandler.ko_true-unreach-call.cil.c                     ERROR (recursion)               14.45        3.66        None
+linux-4.0-rc1---drivers--hwmon--applesmc.ko_true-unreach-call.cil.c                                 TIMEOUT                        901.80      732.60        None
+linux-4.0-rc1---drivers--hwmon--nct6775.ko_true-unreach-call.cil.c                                  TIMEOUT                        905.78      745.94        None
+linux-4.0-rc1---drivers--media--usb--dvb-usb-v2--dvb-usb-mxl111sf.ko_true-unreach-call.cil.c        TIMEOUT                        903.39      760.65        None
+linux-4.0-rc1---drivers--mmc--card--mmc_test.ko_true-unreach-call.cil.c                             TIMEOUT                        901.36      884.09        None
+linux-4.0-rc1---drivers--mtd--devices--docg3.ko_true-unreach-call.cil.c                             EXCEPTION                       12.13        3.12        None
+linux-4.0-rc1---drivers--net--ethernet--amd--amd8111e.ko_true-unreach-call.cil.c                    TIMEOUT                        906.80      733.63        None
+linux-4.0-rc1---drivers--net--ethernet--atheros--atl1e--atl1e.ko_true-unreach-call.cil.c            TIMEOUT                        910.52      628.15        None
+linux-4.0-rc1---drivers--net--ethernet--dec--tulip--dmfe.ko_true-unreach-call.cil.c                 TIMEOUT                        903.21      698.86        None
+linux-4.0-rc1---drivers--net--ethernet--ethoc.ko_true-unreach-call.cil.c                            TIMEOUT                        904.80      788.34        None
+linux-4.0-rc1---drivers--net--ethernet--icplus--ipg.ko_true-unreach-call.cil.c                      TIMEOUT                        904.82      639.86        None
+linux-4.0-rc1---drivers--net--ethernet--intel--igbvf--igbvf.ko_true-unreach-call.cil.c              ERROR (recursion)               29.04        6.95        None
+linux-4.0-rc1---drivers--net--wireless--rtl818x--rtl8180--rtl818x_pci.ko_true-unreach-call.cil.c    TIMEOUT                        902.38      874.06        None
+linux-4.0-rc1---drivers--scsi--BusLogic.ko_true-unreach-call.cil.c                                  TIMEOUT                        902.36      835.68        None
+linux-4.0-rc1---drivers--usb--host--u132-hcd.ko_true-unreach-call.cil.c                             TIMEOUT                        902.04      874.08        None
+linux-4.0-rc1---drivers--vme--bridges--vme_ca91cx42.ko_true-unreach-call.cil.c                      TIMEOUT                        903.78      747.37        None
+linux-4.0-rc1---drivers--xen--xen-pciback--xen-pciback.ko_true-unreach-call.cil.c                   TIMEOUT                        917.19      672.68        None
+linux-4.0-rc1---fs--nfs--nfsv2.ko_true-unreach-call.cil.c                                           TIMEOUT                        902.81      813.68        None
+linux-4.0-rc1---fs--squashfs--squashfs.ko_true-unreach-call.cil.c                                   ERROR (recursion)               13.52        3.46        None
+linux-4.0-rc1---net--rose--rose.ko_true-unreach-call.cil.c                                          TIMEOUT                        901.38      875.06        None
+linux-4.0-rc1---sound--drivers--vx--snd-vx-lib.ko_true-unreach-call.cil.c                           TIMEOUT                        902.37      867.89        None
+linux-4_true-termination.0-rc1---drivers--media--rc--lirc_dev.ko_true-unreach-call.cil.c            true                            10.64        2.80        None
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+Run set 1                                                                                           done                         33629.30    27148.22           -
+
+Statistics:             53 Files
+  correct:               0
+    correct true:        0
+    correct false:       0
+  incorrect:             0
+    incorrect true:      0
+    incorrect false:     0
+  unknown:              42
