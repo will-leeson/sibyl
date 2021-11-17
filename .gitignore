@@ -9,4 +9,5 @@ paperSummaries
 qualsIdea
 src/data_handlers/*.png
 src/data_handlers/*.csv
+data/**.html
 **/__pychache__
