@@ -111,7 +111,7 @@ class GAT(torch.nn.Module):
         if self.pool == global_sort_pool:
             x = self.pool(x, batch, self.k)
         else:
-            x = self.pool(x, batch, edge_index)
+            x = self.pool(x, batch)
         
 
         x = torch.cat((x.reshape(1,x.size(0)*x.size(1)), problemType.unsqueeze(1)), dim=1)
