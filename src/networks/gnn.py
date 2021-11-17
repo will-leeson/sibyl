@@ -3,7 +3,7 @@ import torch
 from torch._C import Value
 import torch.nn as nn
 import torch.nn.functional as f
-from torch_geometric.nn import GATv2Conv, GatedGraphConv, JumpingKnowledge, global_max_pool, global_mean_pool, global_add_pool, global_sort_pool, GlobalAttention#, GraphMultisetTransformer
+from torch_geometric.nn import GATv2Conv, GatedGraphConv, JumpingKnowledge, global_max_pool, global_mean_pool, global_add_pool, global_sort_pool, GlobalAttention, GraphMultisetTransformer
 from torch_geometric.nn.conv.gat_conv import GATConv
 '''
 File - ggnn.py
@@ -82,8 +82,8 @@ class GAT(torch.nn.Module):
             self.k = k
         elif pool == "attention":
             self.pool = GlobalAttention(gate_nn=nn.Sequential(torch.nn.Linear(fcInputLayerSize-1, fcInputLayerSize//2), nn.LeakyReLU(), torch.nn.Linear(fcInputLayerSize//2, fcInputLayerSize//2), nn.LeakyReLU(), torch.nn.Linear(fcInputLayerSize//2, 1), nn.Tanh()))
-        # elif pool == "multiSet":
-        #     self.pool = GraphMultisetTransformer(in_channels=fcInputLayerSize, hidden_channels=)
+        elif pool == "multiset":
+            self.pool = GraphMultisetTransformer(in_channels=fcInputLayerSize-1, hidden_channels=fcInputLayerSize-1, out_channels=fcInputLayerSize-1, num_nodes=1400, num_heads=5, pool_sequences=["GMPool_I"])
         else:
             raise ValueError("Not a valid pool")
 
@@ -111,7 +111,8 @@ class GAT(torch.nn.Module):
         if self.pool == global_sort_pool:
             x = self.pool(x, batch, self.k)
         else:
-            x = self.pool(x, batch)
+            x = self.pool(x, batch, edge_index)
+        
 
         x = torch.cat((x.reshape(1,x.size(0)*x.size(1)), problemType.unsqueeze(1)), dim=1)
 
