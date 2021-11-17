@@ -2,15 +2,16 @@ import glob, csv, os, re
 import numpy as np
 from matplotlib import pyplot as plt
 
-resultsFiles = glob.glob("finalGatTest/*.npz")
+name="stuff"
 
-name="finalGatTest"
-#rawDataFile = csv.writer(open(name+"Data.csv", 'w'), delimiter=",")
+resultsFiles = glob.glob(name+"/*.npz")
+
+rawDataFile = csv.writer(open(name+"Data.csv", 'w'), delimiter=",")
 collatedDataFile = csv.writer(open("collated"+name+"Data.csv", 'w'), delimiter=",")
 
 collatedData = dict()
 topkDict = dict()
-#rawDataFile.writerow(["numPasses", "task", "alg","pool", "k", "mode", "trainginData", "hasAST", "hasCFG", "hasDFG", "corr", "topk", "correct"])
+rawDataFile.writerow(["numPasses", "task", "alg","pool", "k", "mode", "trainginData", "hasAST", "hasCFG", "hasDFG", "corr", "topk", "correct"])
 
 full = []
 opt_succ = []
@@ -20,7 +21,7 @@ for aFile in resultsFiles:
     k=10
 
     theSplit = aFile.split("pool_type")
-    pool= "add" if "add" in aFile else "mean" if "mean" in aFile else "sort"
+    pool= "add" if "add" in aFile else "mean" if "mean" in aFile else "attention" if "attention" in aFile else "sort"
 
     theSplit = aFile.split("time_steps=")
     try:
@@ -47,6 +48,10 @@ for aFile in resultsFiles:
         trainingData = "reachSafety"
     elif "termination" in aFile:
         trainingData = "termination"
+    elif "corrected" in aFile:
+        trainingData = "corrected"
+    else:
+        trainingData = "alg"
 
     alg = "alg=True" in aFile
     
@@ -80,7 +85,7 @@ for aFile in resultsFiles:
             continue
     else:
         maxTen[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)]=1
-    #rawDataFile.writerow([numPasses, hasAST, hasCFG, hasDFG, corr])
+    rawDataFile.writerow([numPasses, hasAST, hasCFG, hasDFG, corr])
     if (numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG) in collatedData:
         collatedData[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)].append([corr, topk, correct]) 
         topkDict[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)].append(topkChoices)
@@ -88,7 +93,6 @@ for aFile in resultsFiles:
         collatedData[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)] = [[corr, topk, correct]]
         topkDict[(numPasses, task, alg, pool, k, mode, trainingData, hasAST, hasCFG, hasDFG)] = [topkChoices]
 
-print("Yes")
 collatedDataFile.writerow(["numPasses","task", "alg", "pool", "k", "mode", "trainginData", "hasAST", "hasCFG", "hasDFG", "corrMean", "corrSTD", "topk", "topkSTD", "correct", "correctSTD", "num"])
 for key in collatedData:
     corrsMean = np.mean([x[0] for x in collatedData[key]])

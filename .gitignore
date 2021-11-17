@@ -7,4 +7,6 @@ data/graphs21/*
 data/raw21/*
 paperSummaries
 qualsIdea
+src/data_handlers/*.png
+src/data_handlers/*.csv
 **/__pychache__
