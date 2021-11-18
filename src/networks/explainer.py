@@ -14,7 +14,7 @@ if __name__ == '__main__':
 	parser.add_argument("-p", "--problem-types", help="Which problem types to consider:termination, overflow, reachSafety, memSafety (Default=All)", nargs="+", default=['termination', 'overflow', 'reachSafety', 'memSafety'], choices=['termination', 'overflow', 'reachSafety', 'memSafety'])
 	parser.add_argument('-n','--net', help="GGNN, GAT", default="GAT", choices=["GGNN","GAT"])
 	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="cat", choices=['max', 'cat', 'lstm'])
-	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, sort)", default="mean", choices=["max", "mean","add","sort"])
+	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, sort, attention)", default="mean", choices=["max", "mean","add","sort","attention"])
 	parser.add_argument("--alg", help="If activate, will look at algorithm groups instead of tools", action="store_true")
 	parser.add_argument("--model-path", help="The path to the pretrained model", required=True)
 
@@ -22,7 +22,6 @@ if __name__ == '__main__':
 
 	tokenToNumDict = json.load(open("../../data/tokenDict.json"))
 	numToTokenDict = {v:k for k,v in tokenToNumDict.items()}
-	numToTokenDict[65] = "modulo"
 
 	trainFiles = json.load(open("../../data/subsetTrainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
@@ -43,7 +42,7 @@ if __name__ == '__main__':
 	
 	edges_tensor = [torch.from_numpy(edges[edgeSet]) for edgeSet in edges]
 
-	edge_labels = torch.cat([torch.full((len(edges_tensor[i]),1),i) for i in range(len(edges_tensor))], dim=0)        
+	edge_labels = torch.cat([torch.full((len(edges_tensor[i]),1),i) for i in range(len(edges_tensor))], dim=0).float()        
 	edges_tensor = torch.cat(edges_tensor).transpose(0,1).long()
 
 	data = Data(x=nodes.float(), edge_index=edges_tensor, edge_attr=edge_labels, problemType=torch.FloatTensor([1]))
@@ -55,7 +54,6 @@ if __name__ == '__main__':
 	else:
 		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=nodes.size(1), outputLayerSize=4, mode=args.mode, k=20, pool=args.pool_type).to(0)
 
-	print(model)
 	model.load_state_dict(torch.load(args.model_path))
 	model.eval()
 
@@ -68,44 +66,18 @@ if __name__ == '__main__':
 	G = nx.MultiDiGraph()
 	alpha=0.5
 
-	edges = {}
 	nodes = set()
-	AST = []
+	AST, CFG, DFG = {}, {}, {}
 	print(edge_attr.size())
 	print(edge_mask.size())
 
 	for edge, mask_val, attr in zip(edge_index.transpose(0,1), edge_mask, edge_attr.squeeze()):
 		if attr.item() == 0:
-			if (edge[0].item(),edge[1].item()) in edges:
-				if edges[(edge[0].item(),edge[1].item())]['label']=='CFG':
-					edges[(edge[0].item(),edge[1].item())] = {"color": "magenta", "label":"AST,CFG"}	
-				elif edges[(edge[0].item(),edge[1].item())]['label']=='DFG':
-					edges[(edge[0].item(),edge[1].item())] = {"color": "darkgoldenrod1", "label":"AST,DFG"}
-				else:
-					edges[(edge[0].item(),edge[1].item())] = {"color": "black", "label":"AST,CFG,DFG"}
-			else:
-				edges[(edge[0].item(),edge[1].item())] = {"color": "red", "label":"AST"}
-				AST.append((edge[0].item(),edge[1].item(), {"color": "red", "label":"AST"}))
+			AST[(edge[0].item(),edge[1].item())] = {"color": "red", "label":"AST"}	
 		elif attr.item() == 1:
-			if (edge[0].item(),edge[1].item()) in edges:
-				if edges[(edge[0].item(),edge[1].item())]['label']=='AST':
-					edges[(edge[0].item(),edge[1].item())] = {"color": "darkgoldenrod1", "label":"AST,DFG"}	
-				elif edges[(edge[0].item(),edge[1].item())]['label']=='CFG':
-					edges[(edge[0].item(),edge[1].item())] = {"color": "cyan", "label":"CFG,DFG"}
-				else:
-					edges[(edge[0].item(),edge[1].item())] = {"color": "black", "label":"AST,CFG,DFG"}
-			else:
-				edges[(edge[0].item(),edge[1].item())] ={"color": "green", "label":"DFG"}
+			DFG[(edge[0].item(),edge[1].item())] ={"color": "green", "label":"DFG"}
 		else:
-			if (edge[0].item(),edge[1].item()) in edges:
-				if edges[(edge[0].item(),edge[1].item())]['label']=='AST':
-					edges[(edge[0].item(),edge[1].item())] = {"color": "magenta", "label":"AST,CFG"}	
-				elif edges[(edge[0].item(),edge[1].item())]['label']=='CFG':
-					edges[(edge[0].item(),edge[1].item())] = {"color": "cyan", "label":"CFG,DFG"}
-				else:
-					edges[(edge[0].item(),edge[1].item())] = {"color": "black", "label":"AST,CFG,DFG"}
-			else:
-				edges[(edge[0].item(),edge[1].item())] = {"color": "blue", "label":"CFG"}
+			CFG[(edge[0].item(),edge[1].item())] = {"color": "blue", "label":"CFG"}
 		nodes.add(edge[0].item())
 		nodes.add(edge[1].item())
 	
@@ -123,7 +95,17 @@ if __name__ == '__main__':
 	G = nx.MultiDiGraph()
 
 	edgesList = []
-	for (k1,k2),v in edges.items():
+	for (k1,k2),v in AST.items():
+		edgesList.append((k1,k2,v))
+	G.add_nodes_from(list(nodes))
+	G.add_edges_from(edgesList)
+	edgesList = []
+	for (k1,k2),v in CFG.items():
+		edgesList.append((k1,k2,v))
+	G.add_nodes_from(list(nodes))
+	G.add_edges_from(edgesList)
+	edgesList = []
+	for (k1,k2),v in DFG.items():
 		edgesList.append((k1,k2,v))
 	G.add_nodes_from(list(nodes))
 	G.add_edges_from(edgesList)

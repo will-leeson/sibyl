@@ -101,7 +101,7 @@ class GAT(torch.nn.Module):
                 # for val, gatA in zip(torch.unique(edge_attr), gat):
                     # corr_edges = edge_index.transpose(0,1)[(edge_attr==val).squeeze()].transpose(0,1)
                 out = gat(x, edge_index, edge_attr=edge_attr)
-                x += f.leaky_relu(out)
+                x = f.leaky_relu(out)
                 if self.shouldJump:
                     xs += [x]
 
@@ -113,9 +113,8 @@ class GAT(torch.nn.Module):
         else:
             x = self.pool(x, batch)
         
-
         x = torch.cat((x.reshape(1,x.size(0)*x.size(1)), problemType.unsqueeze(1)), dim=1)
-
+        
         x = self.fc1(x)
         x = f.leaky_relu(x)
         x = self.fc2(x)
