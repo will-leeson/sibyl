@@ -20,8 +20,11 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 
+	graphs = json.load(open("algFinal.json"))
+
 	tokenToNumDict = json.load(open("../../data/tokenDict.json"))
 	numToTokenDict = {v:k for k,v in tokenToNumDict.items()}
+	numToTokenDict[12] = "modulo"
 
 	trainFiles = json.load(open("../../data/subsetTrainFiles.json"))
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
@@ -36,83 +39,71 @@ if __name__ == '__main__':
 	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets)
 	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets)
 
-	nodes = torch.from_numpy(np.load("../../data/final_graphs/while_infinite_loop_1_true-unreach-call_false-termination.i.json.npz")['node_rep'])
-
-	edges = np.load("../../data/final_graphs/while_infinite_loop_1_true-unreach-call_false-termination.i.jsonEdges.npz")
-	
-	edges_tensor = [torch.from_numpy(edges[edgeSet]) for edgeSet in edges]
-
-	edge_labels = torch.cat([torch.full((len(edges_tensor[i]),1),i) for i in range(len(edges_tensor))], dim=0).float()        
-	edges_tensor = torch.cat(edges_tensor).transpose(0,1).long()
-
-	data = Data(x=nodes.float(), edge_index=edges_tensor, edge_attr=edge_labels, problemType=torch.FloatTensor([1]))
-
-	data = Batch.from_data_list([data]).cuda()
-
 	if args.net == 'GGNN':
 		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(0)
 	else:
-		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=nodes.size(1), outputLayerSize=4, mode=args.mode, k=20, pool=args.pool_type).to(0)
+		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=155, outputLayerSize=4, mode=args.mode, k=20, pool=args.pool_type).to(0)
 
 	model.load_state_dict(torch.load(args.model_path))
 	model.eval()
 
-	explainer = GNNExplainer(model, epochs=100, num_hops=args.time_steps, return_type="raw")
+	explainer = GNNExplainer(model, epochs=100, return_type="raw")
 
+	for alg in graphs:
+		for prog in graphs[alg]:
+			nodes = torch.from_numpy(np.load("../../data/final_graphs/"+ prog+".npz")['node_rep'])
 
-	x, edge_index, edge_attr, problemType, batch = data.x, data.edge_index, data.edge_attr, data.problemType, data.batch 
-	node_feat_mask, edge_mask = explainer.explain_graph(x=x, edge_index=edge_index, edge_attr=edge_attr, problemType=problemType)
+			edges = np.load("../../data/final_graphs/"+prog+"Edges.npz")
+			
+			edges_tensor = [torch.from_numpy(edges[edgeSet]) for edgeSet in args.edge_sets]
 
-	G = nx.MultiDiGraph()
-	alpha=0.5
+			edge_labels = torch.cat([torch.full((len(edges_tensor[i]),1),i) for i in range(len(edges_tensor))], dim=0).float()        
+			edges_tensor = torch.cat(edges_tensor).transpose(0,1).long()
 
-	nodes = set()
-	AST, CFG, DFG = {}, {}, {}
-	print(edge_attr.size())
-	print(edge_mask.size())
+			data = Data(x=nodes.float(), edge_index=edges_tensor, edge_attr=edge_labels, problemType=torch.FloatTensor([1]))
 
-	for edge, mask_val, attr in zip(edge_index.transpose(0,1), edge_mask, edge_attr.squeeze()):
-		if attr.item() == 0:
-			AST[(edge[0].item(),edge[1].item())] = {"color": "red", "label":"AST"}	
-		elif attr.item() == 1:
-			DFG[(edge[0].item(),edge[1].item())] ={"color": "green", "label":"DFG"}
-		else:
-			CFG[(edge[0].item(),edge[1].item())] = {"color": "blue", "label":"CFG"}
-		nodes.add(edge[0].item())
-		nodes.add(edge[1].item())
-	
+			data = Batch.from_data_list([data]).cuda()
 
-	G.add_nodes_from(list(nodes))
-	G.add_edges_from(AST)
-	
-	mapping = {k : numToTokenDict[torch.where(node==1)[0].item()]+str(k) for k,node in zip(range(len(x)), x)}
+			x, edge_index, edge_attr, problemType, batch = data.x, data.edge_index, data.edge_attr, data.problemType, data.batch 
 
-	G = nx.relabel_nodes(G, mapping)
+			nodes = [(i, numToTokenDict[torch.where(item==1)[0].item()]) for i, item in zip(range(len(x)),x) ]
 
-	# run "dot -Tpng test.dot > test.png"
-	nx.nx_agraph.write_dot(G,'AST.dot')
+			node_feat_mask, edge_mask = explainer.explain_graph(x=x, edge_index=edge_index, edge_attr=edge_attr, problemType=problemType)
 
-	G = nx.MultiDiGraph()
+			G = nx.MultiDiGraph()
+			alpha=0.5
 
-	edgesList = []
-	for (k1,k2),v in AST.items():
-		edgesList.append((k1,k2,v))
-	G.add_nodes_from(list(nodes))
-	G.add_edges_from(edgesList)
-	edgesList = []
-	for (k1,k2),v in CFG.items():
-		edgesList.append((k1,k2,v))
-	G.add_nodes_from(list(nodes))
-	G.add_edges_from(edgesList)
-	edgesList = []
-	for (k1,k2),v in DFG.items():
-		edgesList.append((k1,k2,v))
-	G.add_nodes_from(list(nodes))
-	G.add_edges_from(edgesList)
-	
-	mapping = {k : numToTokenDict[torch.where(node==1)[0].item()]+str(k) for k,node in zip(range(len(x)), x)}
+			AST, CFG, DFG = {}, {}, {}
+			counter = 0
 
-	G = nx.relabel_nodes(G, mapping)
+			numImportantEdges = 5 if edge_mask.size(0) // 10 <= 5 else edge_mask.size(0) // 10 if edge_mask.size(0) // 10 <= 50 else 50
+			thebar = edge_mask.topk(numImportantEdges)[0][-1].item()
+			for edge, mask_val, attr in zip(edge_index.transpose(0,1), edge_mask, edge_attr.squeeze()):
+				color, counter, arrowhead = (6, counter+1, "normal") if mask_val > thebar else (3, counter, "empty")
+				if attr.item() == 0:
+					AST[(edge[0].item(),edge[1].item())] = {"colorscheme":"reds8","color": color, "style":"solid", "arrowhead":arrowhead}	
+				elif attr.item() == 1:
+					CFG[(edge[0].item(),edge[1].item())] = {"colorscheme":"blues8", "color": color, "style":"dashed","arrowhead":arrowhead}
+				else:
+					DFG[(edge[0].item(),edge[1].item())] ={"colorscheme":"greens8","color": color,"style":"dotted","arrowhead":arrowhead}
 
-	# run "dot -Tpng test.dot > test.png"
-	nx.nx_agraph.write_dot(G,'test.dot')
+			print(counter)
+			for node, val in nodes:
+				G.add_node(node, label=val)
+
+			edgesList = []
+			for (k1,k2),v in AST.items():
+				edgesList.append((k1,k2,v))
+			G.add_edges_from(edgesList)
+			edgesList = []
+			for (k1,k2),v in CFG.items():
+				edgesList.append((k1,k2,v))
+			G.add_edges_from(edgesList)
+			edgesList = []
+			for (k1,k2),v in DFG.items():
+				edgesList.append((k1,k2,v))
+			G.add_edges_from(edgesList)
+
+			# run "dot -Tpng test.dot > test.png"
+			nx.nx_agraph.write_dot(G,alg+"/"+prog+".dot")
+
