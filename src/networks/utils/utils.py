@@ -7,7 +7,7 @@ from torch.nn import MarginRankingLoss
 import torch
 from torch.utils.data import WeightedRandomSampler
 import torch.nn as nn
-import os, itertools, tqdm, json
+import os, itertools, tqdm, json, time
 import numpy as np
 from scipy.stats import spearmanr
 from torch.distributed import ReduceOp
@@ -213,15 +213,19 @@ def evaluate(model, test_set, gpu=0, k=3):
 
     model.eval()
 
-    test_loader = torch_geometric.data.DataLoader(dataset=test_set, batch_size=1)
+    test_loader = torch_geometric.loader.DataLoader(dataset=test_set, batch_size=1)
 
     for (i, (graphs,labels)) in enumerate(tqdm.tqdm(test_loader, leave=False)):
         graphs = graphs.to(device=gpu)
         labels = labels.to(device=gpu)
         problemTypes = graphs.problemType
-        with autocast():
-            with torch.no_grad():
-                scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
+        try:
+            with autocast():
+                with torch.no_grad():
+                    scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
+        except RuntimeError:
+            time.sleep(2)
+            continue
 
         for j in range(len(labels)):
             corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
@@ -250,9 +254,9 @@ def evaluate(model, test_set, gpu=0, k=3):
     
     res = [[],[],[],[],[]]
     
-    res[0] = [corr_sum.sum()/probCounter.sum(), topKAcc.sum()/probCounter.sum(), bestPredicts.sum()/probCounter.sum(), correctPredicts.sum()/possibleCorrect.sum(), predSpot.sum(axis=0)]
+    res[0] = np.array([corr_sum.sum()/probCounter.sum(), topKAcc.sum()/probCounter.sum(), bestPredicts.sum()/probCounter.sum(), correctPredicts.sum()/possibleCorrect.sum(), predSpot.sum(axis=0)], dtype=object)
     for i in range(0,len(res)-1):
-        res[i+1] = [corr_sum[i]/probCounter[i], topKAcc[i]/probCounter[i], bestPredicts[i]/probCounter[i], correctPredicts[i]/possibleCorrect[i], predSpot[i]]
+        res[i+1] = np.array([corr_sum[i]/probCounter[i], topKAcc[i]/probCounter[i], bestPredicts[i]/probCounter[i], correctPredicts[i]/possibleCorrect[i], predSpot[i]], dtype=object)
 
 
     return res, predicted
