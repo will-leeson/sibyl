@@ -1,5 +1,4 @@
-# Algorithm Selection for Program Verification using Graph Neural Networks
+# Graves - Graph Attention Verifier Selector
 
-This repo houses the qualification exam for Will Leeson. The goal of this project
-is to use graph neural networks to learn an ordering of verification tools given a
-program
+This is the implementation of the Graves technique introduced in the paper "Algorithm Selection for Software Verification using Graph
+Attention Networks"
