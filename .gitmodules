@@ -2,7 +2,7 @@
 	path = src/graph-builder
 	url = git@github.com:will-leeson/graph-builder.git
 
-[submodule "SubmoduleTestRepo"]
+[submodule "data/sv-benchmarks"]
     path = data/sv-benchmarks
     url = git@github.com:sosy-lab/sv-benchmarks.git
     branch = svcomp18
