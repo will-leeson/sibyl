@@ -1,0 +1,104 @@
+Analysis for SymEx
+
+addsub_float_inexact_true-unreach-call_true-termination.c
+AST
+1. Main return
+2. Decl of directly dependent variable
+3. Decl of directly dependent variable
+4. Update value of directly dependent variable
+5. Assert call
+6. Assert call
+CFG
+7. Assert function
+DFG
+8. Update value of indirectly (2) directly dependent variable 
+
+drift_tenth_true-unreach-call_true-termination.c
+AST
+1. Assert condition
+2. Decl of directly dependent variable; Update value of directly dependent variable
+3. Update value of directly dependent variable
+4. Update value of directly dependent variable
+CFG
+5. directly dependent function
+6. Update value of directly dependent variable
+DFG
+7. Update value of directly dependent variable
+8. Update value of Loop Index Variable (Bound small value)
+
+ex3_forlist_true-termination.c_true-unreach-call.i
+AST
+1. Call of indirectly (1) dependent function 
+2. indirectly (1) dependent function
+3. Loop body (Bound small value)
+4. Update value of indirectly (1) dependent variable
+5. Update value of directly dependent variable
+6. Parameter to indirectly (1) dependent function
+7. Decl of Loop Index Variable (Bound small value)
+8. Branch condition
+9. Branching statement
+10. Update value of indirectly (1) dependent variable
+11. Update value of directly dependent variable
+12. Parameter to directly dependent function
+13. Branch condition
+14. Assert condition
+15. Update value of directly dependent variable
+16. Update value of directly dependent variable
+17. Call of directly dependent function
+18. Decl of indirectly (1) dependent variable
+19. Error call
+20. Call of indirectly (1) dependent function
+21. Call of directly dependent function
+CFG
+22. Update value of directly dependent variable
+23. directly dependent function
+24. Return of directly dependent function
+25. Loop body (Bound small value)
+26. Call of indirectly (1) dependent function
+27. Call of directly dependent function
+28. Return of directly dependent function
+DFG
+29. Update value of Loop Index Variable (Bound small value)
+30. Update value of directly dependent variable
+32. Update of unimportant variable (Would be important for memSafety)
+
+float5_true-unreach-call_true-termination.i
+AST
+1. Input call
+2. Assume function 
+3. Assume condition 
+4. Assume condition 
+5. Assume condition
+6. Update value of directly dependent variable
+7. Assert condition
+CFG
+8. Input call
+DFG
+9. Assume condition 
+10. Assert condition
+
+gcd_1_true-unreach-call_true-no-overflow.i
+AST
+1. Assert condition
+2. If header
+3. Update value of indirectly (1) dependent variable
+4. Branch condition
+5. Update value of indirectly (1) dependent variable
+6. Loop condition
+7. Loop condition
+8. Update value of indirectly (1) dependent variable
+9. Update value of indirectly (2) directly dependent variable
+10. Update value of indirectly (2) directly dependent variable
+11. Branch condition
+12. Assert condition
+CFG
+13. Assert return
+14. Error call
+15. Loop body (Nondet bound)
+16. Main return
+17. Main return
+DFG
+18. Parameter to indirectly (1) dependent function
+19. Parameter to indirectly (1) dependent function
+20. Parameter to indirectly (1) dependent function
+21. Assert condition

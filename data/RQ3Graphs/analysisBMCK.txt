@@ -1,0 +1,132 @@
+Analysis for BMC+K
+
+count_by_1_true-unreach-call_true-termination.i
+AST
+1. Branch to error call
+2. Assert condition
+3. Loop body (Bound Large value)
+4. Loop Index Variable start value (Bound Large value)
+CFG
+5. Decl of directly dependent variable 
+DFG
+6. Update value of directly dependent variable 
+
+id_build_true-unreach-call_true-termination.i
+AST
+1. Branch to error call
+2. Assert condition
+3. Input variable
+4. Loop Index Variable start value (Unbounded)
+5. Loop Index Variable start value (Bound small value)
+6. Assert condition
+7. Assert condition
+CFG
+8. directly dependent function
+9. Assert call
+10. Assert call
+DFG
+11. Loop Index Variable start value (Bound small value)
+12. Update Loop Index Variable value
+14. Decl of Loop Index Variable (Unbounded); Decl of directly dependent variable
+
+interpolation2_true-unreach-call_true-termination.c
+1. Assume function
+2. Error call
+3. Decl of indirectly (1) dependent variable
+4. Edge to loop 
+5. Assert call
+6. Decl of Loop Index Variable (Bound small value)
+7. Decl of input
+8. Decl of indirectly (1) dependent variable
+9. Update value of indirectly (1) dependent variable 
+10. Update value of indirectly (1) dependent variable 
+11. Update value of indirectly (1) dependent variable 
+12. Update value of indirectly (1) dependent variable 
+13. Update value of indirectly (1) dependent variable 
+14. Assume condition
+15. Assume condition
+16. Loop condition
+17. Loop condition
+18. Loop condition
+19. Update value of directly dependent variable 
+20. Update value of directly dependent variable 
+21. Update value of directly dependent variable 
+22. Update value of directly dependent variable 
+23. Update value of directly dependent variable 
+24. Update value of directly dependent variable 
+CFG
+25. Assert return
+26. Loop break
+DFG
+27. Update value of indirectly (1) dependent variable
+28. Update value of indirectly (1) dependent variable
+29. Update value of indirectly (1) dependent variable
+30. Update value of indirectly (1) dependent variable
+31. Update value of indirectly (1) dependent variable
+32. Update value of directly dependent variable 
+33. Update value of directly dependent variable 
+34. Assert condition
+36. Update value of indirectly (1) dependent variable
+37. Assert condition
+
+veris.c_NetBSD-libc__loop_true-unreach-call_true-termination.i
+AST
+1. Assert condition
+2. directly dependent function return
+3. Loop Index Variable start value (Infinite Loop)
+4. Assert condition
+5. Assert condition
+6. Assert condition
+7. Update value of directly dependent variable; Update value of Loop Index Variable 
+8. Decl of indirectly (1) dependent variable  
+9. Decl of indirectly (1) dependent variable 
+10. Decl of indirectly (1) dependent variable; Update value of indirectly (1) dependent variable
+CFG
+11. Branch to error call 
+12. Decl of Loop Index Variable; Decl of directly dependent variable
+13. Branch to loop
+DFG
+14. Update value of directly dependent variable
+15. Update value of directly dependent variable
+16. Parameter to directly dependent function
+17. Update value of directly dependent variable
+
+vogal_true-unreach-call.i
+AST
+1. Edge to assert function
+2. Assert condition
+3. Update value of indirectly (1) dependent variable
+4. Update value of indirectly (1) dependent variable
+5. Update value of indirectly (1) dependent variable
+6. Decl of directly dependent variable  
+7. Decl of unused variable
+8. Loop condition
+9. Update value of Loop Index Variable
+10. Input variable
+11. Loop condition
+12. Loop Index Variable start value (Nondet bound)
+13. Loop condition
+14. Loop condition
+15. Loop condition
+16. Decl of directly dependent variable; Update value of directly dependent variable
+17. Loop condition
+18. Loop condition
+19. Update Loop Index Variable value
+20. Branch condition
+21. Assert condition
+22. Assert condition
+CFG
+23. Assert return
+24. Error call
+25. Decl of indirectly (1) dependent variable; Decl of input
+26. Input call
+27. Branch to loop; Nested loop
+28. Loop exit
+DFG
+29. Update value of indirectly (1) dependent variable
+30. Update value of indirectly (1) dependent variable
+31. Update Loop Index Variable value
+32. Update Loop Index Variable value
+33. Update Loop Index Variable value
+37. Update value of directly dependent variable
+39. Loop condition

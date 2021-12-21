@@ -1,6 +1,0 @@
-predicateAnalysis
-kInduction
-ValueAnalysis-itp
-bmc
-ValueAnalysis
-Unknown
