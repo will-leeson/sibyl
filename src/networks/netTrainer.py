@@ -14,9 +14,9 @@ This file is a driver used to train networks
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="GNN Trainer")
-	parser.add_argument("-t", "--time-steps", help="Number of timesteps (Default=0)", default=0, type=int)
+	parser.add_argument("--mp-layers", help="Number of message passing layers (Default=0)", default=0, type=int)
 	parser.add_argument("-e", "--epochs", help="Number of training epochs (Default=20)", default=20, type=int)
-	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "CFG"], choices=['AST', 'DFG', "CFG"])
+	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, CFG, DFG (Default=All)", nargs='+', default=['AST', 'DFG', "ICFG"], choices=['AST', 'DFG', "ICFG"])
 	parser.add_argument("-p", "--problem-types", help="Which problem types to consider:termination, overflow, reachSafety, memSafety (Default=All)", nargs="+", default=['termination', 'overflow', 'reachSafety', 'memSafety'], choices=['termination', 'overflow', 'reachSafety', 'memSafety'])
 	parser.add_argument('-n','--net', help="GGNN, GAT", default="GAT", choices=["GGNN","GAT"])
 	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="cat", choices=['max', 'cat', 'lstm'])
@@ -27,37 +27,47 @@ if __name__ == '__main__':
 	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
 	parser.add_argument("--alg", help="If activate, will look at algorithm groups instead of tools", action="store_true")
 	parser.add_argument("--no-jump", help="Whether or not to use jumping knowledge", action="store_false", default=True)
+	parser.add_argument("train", nargs=1, help="The training set")
+	parser.add_argument("val", nargs=1, help="The validation set")
+	parser.add_argument("test", nargs=1, help="The test set")
+	parser.add_argument("dataset", nargs=1, help="Directory housing the dataset")
 
 
 	args = parser.parse_args()
 
-	trainFiles = json.load(open("../../data/subsetTrainFiles.json"))
+	try:
+		trainFiles = json.load(open(args.train[0]))
+	except FileNotFoundError:
+		print("Error:", args.train[0], "does not exists. Please input a valid file")
+		exit(1)
 	trainLabels = [(key, [item[1] for item in trainFiles[key]]) for key in trainFiles]
 	trainLabels = getCorrectProblemTypes(trainLabels, args.problem_types)
 
-	valFiles = json.load(open("../../data/subsetValFiles.json"))
+	try:
+		valFiles = json.load(open(args.val[0]))
+	except:
+		print("Error:", args.val[0], "does not exists. Please input a valid file")
+		exit(1)
 	valLabels = [(key, [item[1] for item in valFiles[key]]) for key in valFiles]
 	valLabels = getCorrectProblemTypes(valLabels, args.problem_types)
 
-	testFiles = json.load(open("../../data/subsetTestFiles.json"))
+	try:
+		testFiles = json.load(open(args.test[0]))
+	except:
+		print("Error:", args.test[0], "does not exists. Please input a valid file")
+		exit(1)
 	testLabels = [(key, [item[1] for item in testFiles[key]]) for key in testFiles]
 	testLabels = getCorrectProblemTypes(testLabels, args.problem_types)
 
-	if args.alg:
-		trainLabels = groupLabels(trainLabels)
-		valLabels = groupLabels(valLabels)
-		testLabels = groupLabels(testLabels)
+	train_set = GeometricDataset(trainLabels, args.dataset[0], args.edge_sets, should_cache=args.cache)
+	val_set = GeometricDataset(valLabels, args.dataset[0], args.edge_sets, should_cache=args.cache)
+	test_set = GeometricDataset(testLabels, args.dataset[0], args.edge_sets, should_cache=args.cache)
 
-	train_set = GeometricDataset(trainLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
-	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
-	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
-
-	#getWeights(trainLabels)
 
 	if args.net == 'GGNN':
-		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=args.gpu)
+		model = GGNN(passes=args.mp_layers, numEdgeSets=len(args.edge_sets), inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=args.gpu)
 	else:
-		model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
+		model = GAT(passes=args.mp_layers, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
 
 	if args.task == "rank":
 		loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)

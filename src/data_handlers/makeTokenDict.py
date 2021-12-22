@@ -10,8 +10,7 @@ for aFile in tqdm.tqdm(files):
     for key in myDict["tokens"]:
         tokenSet.add(myDict["tokens"][key])
     counter+=1
-print(tokenSet)
-print(len(tokenSet))
+
 tokenDict = dict()
 counter = 0
 for item in tokenSet:
