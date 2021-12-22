@@ -178,7 +178,7 @@ def parseGraph(filename,rawGraph):
         else:
             dfgDict[aDef] = [defsToRefs[aDef]]
 
-    output = {"tokens":ptrToToken, "AST":astDict, "ICFG":cfgDict, "DFG":dfgDict}
+    output = {"tokens":ptrToToken, "AST":astDict, "ICFG":cfgDict, "Data":dfgDict}
     json.dump(output, open("../../data/graphs/"+os.path.basename(filename).strip(".txt")+".json", 'w'))
     return output
 
