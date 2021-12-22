@@ -3,7 +3,7 @@
 pushd src/graph-builder
 pwd
 
-if [ -d "src/graph-builder/build" ]
+if [ ! -d "src/graph-builder/build" ]
 then
     mkdir build
 else
@@ -24,10 +24,10 @@ then
         cmake ..
         make
     else
-        echo "I can't find ninja or make. Please install one and reattempt the build process"
+        echo "I can't find ninja or make. Please install one and re-attempt the build process"
     fi
 else
-    echo "I can't find CMake. Please install CMake and reattempt the build process"
+    echo "I can't find CMake. Please install CMake and re-attempt the build process"
     exit 1
 fi
 
