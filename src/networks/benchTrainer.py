@@ -41,9 +41,6 @@ if __name__ == '__main__':
 	val_set = GeometricDataset(valLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
 	test_set = GeometricDataset(testLabels, "../../data/final_graphs/", args.edge_sets, should_cache=args.cache)
 	
-	# trainWeights = getWeights(trainLabels)
-	# valWeights = getWeights(valLabels)
-
 	if args.net == 'GGNN':
 		model = GGNN(passes=args.time_steps, numEdgeSets=len(args.edge_sets), inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode).to(device=args.gpu)
 	else:
