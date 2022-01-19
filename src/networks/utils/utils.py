@@ -57,6 +57,35 @@ class GeometricDataset(GDataset):
 
         return res
 
+class SMTDataset(GDataset):
+    def __init__(self, labels, data_dir):
+        self.labels = labels
+        self.data_dir = data_dir
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx):
+        path = os.path.join(self.data_dir, self.labels[idx][0][:-5]+".npz")
+        
+        try:
+            data = np.load(path)
+        except ValueError:
+            print(path)
+            exit()
+
+        nodes = torch.tensor(data['nodes']).float()
+        edges = torch.tensor(data['edges']).float()
+        edge_attr = torch.ones((1, len(edges[0]))).long()
+
+        label = torch.tensor(self.labels[idx][1])
+
+        problemType = torch.tensor([0])
+
+        res = Data(x=nodes, edge_index=edges, edge_attr=edge_attr, problemType=problemType), label
+
+        return res
+
 class ModifiedMarginRankingLoss(nn.Module):
     def __init__(self, margin=0,gpu=0):
         super(ModifiedMarginRankingLoss, self).__init__()
@@ -65,9 +94,9 @@ class ModifiedMarginRankingLoss(nn.Module):
     
     def forward(self, scores, labels):
         loss = torch.zeros(1).to(device=self.gpu)
+        indx = labels.argsort()
         for i, j in itertools.combinations(list(range(len(labels[0]))),2):
             loss_fn = MarginRankingLoss(margin=self.margin*abs(i-j))
-            indx = labels.argsort()
             loss += loss_fn(scores.gather(1, indx[:,i].unsqueeze(1)), scores.gather(1, indx[:,j].unsqueeze(1)), torch.tensor([1 if i > j else -1]*scores.size(0)).to(device=self.gpu))
         return loss
 
