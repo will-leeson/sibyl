@@ -75,8 +75,8 @@ class SMTDataset(GDataset):
             exit()
 
         nodes = torch.tensor(data['nodes']).float()
-        edges = torch.tensor(data['edges']).float()
-        edge_attr = torch.ones((1, len(edges[0]))).long()
+        edges = torch.tensor(data['edges']).long()
+        edge_attr = torch.ones((len(edges[0]), 1)).float()
 
         label = torch.tensor(self.labels[idx][1])
 

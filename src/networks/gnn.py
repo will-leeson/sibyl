@@ -97,9 +97,6 @@ class GAT(torch.nn.Module):
                 xs = [x]
 
             for gat in self.gats: 
-                # placeholderX = torch.zeros_like(x)
-                # for val, gatA in zip(torch.unique(edge_attr), gat):
-                    # corr_edges = edge_index.transpose(0,1)[(edge_attr==val).squeeze()].transpose(0,1)
                 out = gat(x, edge_index, edge_attr=edge_attr)
                 x = f.leaky_relu(out)
                 if self.shouldJump:
