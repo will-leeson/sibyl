@@ -175,10 +175,10 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             optimizer.step()
 
             if (((i+1)/round(len(trainset), -2))*100)%10==0 or (i+1)==len(train_loader):
-                mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i*batchSize), 4)) + ", Avg-Corr:" +  str(round(corr_sum/(i*batchSize), 4)) + ", TopK-Acc:"+str(round(topk_acc/(i*batchSize), 4)) + ", Success-Acc:"+str(round(success_acc/success_counter,4))
+                mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/((i+1)*batchSize), 4)) + ", Avg-Corr:" +  str(round(corr_sum/((i+1)*batchSize), 4)) + ", TopK-Acc:"+str(round(topk_acc/((i+1)*batchSize), 4)) + ", Success-Acc:"+str(round(success_acc/success_counter,4))
                 print(mystr)
-                train_accuracies.append(round(corr_sum/i, 4))
-                train_losses.append(round(cum_loss/i, 4))
+                train_accuracies.append(round(corr_sum/(i+1), 4))
+                train_losses.append(round(cum_loss/(i+1), 4))
 
         corr_sum = 0.0
         cum_loss = 0.0
@@ -189,7 +189,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         success_acc = 0.0
         success_counter = 0
 
-        for (i, (graphs,labels)) in enumerate((val_loader)):
+        for (i, (graphs,labels)) in enumerate(tqdm.tqdm(val_loader)):
             graphs = graphs.to(device=gpu)
             labels = labels.to(device=gpu)
             if task == "success" and labels.max()<0:
@@ -216,10 +216,10 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         scheduler.step(cum_loss/(i+1))
 
 
-        val_accuracies.append(round(corr_sum/i, 4))
-        val_losses.append(round(cum_loss/i, 4))
+        val_accuracies.append(round(corr_sum/(i+1), 4))
+        val_losses.append(round(cum_loss/(i+1), 4))
 
-        mystr = "Valid-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/(i*batchSize), 4)) + ", Avg-Corr:" +  str(round(corr_sum/(i*batchSize), 4)) + ", TopK-Acc:"+str(round(topk_acc/(i*batchSize), 4)) + ", Success-Acc:"+str(round(success_acc/success_counter,4))
+        mystr = "Valid-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/((i+1)*batchSize), 4)) + ", Avg-Corr:" +  str(round(corr_sum/((i+1)*batchSize), 4)) + ", TopK-Acc:"+str(round(topk_acc/((i+1)*batchSize), 4)) + ", Success-Acc:"+str(round(success_acc/success_counter,4))
         print(mystr)
         if optimizer.param_groups[0]['lr']<1e-7:
             break
@@ -248,13 +248,9 @@ def evaluate(model, test_set, gpu=0, k=3):
         graphs = graphs.to(device=gpu)
         labels = labels.to(device=gpu)
         problemTypes = graphs.problemType
-        try:
-            with autocast():
-                with torch.no_grad():
-                    scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
-        except RuntimeError:
-            time.sleep(2)
-            continue
+        with autocast():
+            with torch.no_grad():
+                scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
 
         for j in range(len(labels)):
             corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
@@ -287,6 +283,7 @@ def evaluate(model, test_set, gpu=0, k=3):
     for i in range(0,len(res)-1):
         res[i+1] = np.array([corr_sum[i]/probCounter[i], topKAcc[i]/probCounter[i], bestPredicts[i]/probCounter[i], correctPredicts[i]/possibleCorrect[i], predSpot[i]], dtype=object)
 
+    mystr = "Avg-Corr:" +  str(round(corr_sum/((i+1)), 4)) + ", TopK-Acc:"+str(round(topKAcc/((i+1)), 4)) + ", Success-Acc:"+str(round(correctPredicts/possibleCorrect,4))
 
     return res, predicted
 def getCorrectProblemTypes(labels, problemTypes):
