@@ -283,8 +283,6 @@ def evaluate(model, test_set, gpu=0, k=3):
     for i in range(0,len(res)-1):
         res[i+1] = np.array([corr_sum[i]/probCounter[i], topKAcc[i]/probCounter[i], bestPredicts[i]/probCounter[i], correctPredicts[i]/possibleCorrect[i], predSpot[i]], dtype=object)
 
-    mystr = "Avg-Corr:" +  str(round(corr_sum/((i+1)), 4)) + ", TopK-Acc:"+str(round(topKAcc/((i+1)), 4)) + ", Success-Acc:"+str(round(correctPredicts/possibleCorrect,4))
-
     return res, predicted
 def getCorrectProblemTypes(labels, problemTypes):
     '''
