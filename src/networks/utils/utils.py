@@ -58,9 +58,10 @@ class GeometricDataset(GDataset):
         return res
 
 class SMTDataset(GDataset):
-    def __init__(self, labels, data_dir):
+    def __init__(self, labels, data_dir, edge_sets):
         self.labels = labels
         self.data_dir = data_dir
+        self.edge_sets = edge_sets
 
     def __len__(self):
         return len(self.labels)
@@ -77,6 +78,13 @@ class SMTDataset(GDataset):
         nodes = torch.tensor(data['nodes']).float()
         edges = torch.tensor(data['edges']).long()
         edge_attr = torch.tensor(data['edge_attr']).float()
+
+        if "AST" not in self.edge_sets:
+            edges = torch.stack((edges[0][edge_attr!=0],edges[1][edge_attr!=0]))
+            edge_attr = edge_attr[edge_attr!=0]
+        if "Data" not in self.edge_sets:
+            edges = torch.stack((edges[0][edge_attr!=1],edges[1][edge_attr!=1]))
+            edge_attr = edge_attr[edge_attr!=1]
 
         label = torch.tensor(self.labels[idx][1])
 
