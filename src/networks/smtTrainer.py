@@ -38,7 +38,6 @@ if __name__ == '__main__':
 
 	dataLoc = "../../data/smtWUber/"
 
-	print(args.cache)
 	train_set = SMTDataset(trainLabels, dataLoc, args.edge_sets, args.cache)
 	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, args.cache)
 	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, args.cache)
