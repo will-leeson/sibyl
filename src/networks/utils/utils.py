@@ -72,7 +72,7 @@ class SMTDataset(GDataset):
 
     def __getitem__(self, idx):
         res=None
-        if idx not in self.cache:
+        if self.cache is None or idx not in self.cache:
             path = os.path.join(self.data_dir, self.labels[idx][0][:-5]+".npz")
             
             try:
@@ -100,7 +100,7 @@ class SMTDataset(GDataset):
         
         if self.cache is not None and idx not in self.cache:
             self.cache[idx] = res
-        elif self.cache:
+        elif self.cache is not None:
             res = self.cache[idx]
 
         return res
