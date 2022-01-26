@@ -50,7 +50,7 @@ class GeometricDataset(GDataset):
 
             res = Data(x=tokens.float(), edge_index=edges_tensor, edge_attr=edge_labels, problemType=problemType),label
 
-        if self.cache and idx not in self.cache:
+        if self.cache is not None and idx not in self.cache:
             self.cache[idx] = res
         elif self.cache:
             res = self.cache[idx]
@@ -58,39 +58,50 @@ class GeometricDataset(GDataset):
         return res
 
 class SMTDataset(GDataset):
-    def __init__(self, labels, data_dir, edge_sets):
+    def __init__(self, labels, data_dir, edge_sets, should_cache=False):
         self.labels = labels
         self.data_dir = data_dir
         self.edge_sets = edge_sets
+        if should_cache:
+            self.cache = dict()
+        else:
+            self.cache = None 
 
     def __len__(self):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        path = os.path.join(self.data_dir, self.labels[idx][0][:-5]+".npz")
+        res=None
+        if idx not in self.cache:
+            path = os.path.join(self.data_dir, self.labels[idx][0][:-5]+".npz")
+            
+            try:
+                data = np.load(path)
+            except ValueError:
+                print(path)
+                exit()
+
+            nodes = torch.tensor(data['nodes']).float()
+            edges = torch.tensor(data['edges']).long()
+            edge_attr = torch.tensor(data['edge_attr']).float()
+
+            if "AST" not in self.edge_sets:
+                edges = torch.stack((edges[0][edge_attr!=0],edges[1][edge_attr!=0]))
+                edge_attr = edge_attr[edge_attr!=0]
+            if "Data" not in self.edge_sets:
+                edges = torch.stack((edges[0][edge_attr!=1],edges[1][edge_attr!=1]))
+                edge_attr = edge_attr[edge_attr!=1]
+
+            label = torch.tensor(self.labels[idx][1])
+
+            problemType = torch.tensor([0])
+
+            res = Data(x=nodes, edge_index=edges, edge_attr=edge_attr, problemType=problemType), label
         
-        try:
-            data = np.load(path)
-        except ValueError:
-            print(path)
-            exit()
-
-        nodes = torch.tensor(data['nodes']).float()
-        edges = torch.tensor(data['edges']).long()
-        edge_attr = torch.tensor(data['edge_attr']).float()
-
-        if "AST" not in self.edge_sets:
-            edges = torch.stack((edges[0][edge_attr!=0],edges[1][edge_attr!=0]))
-            edge_attr = edge_attr[edge_attr!=0]
-        if "Data" not in self.edge_sets:
-            edges = torch.stack((edges[0][edge_attr!=1],edges[1][edge_attr!=1]))
-            edge_attr = edge_attr[edge_attr!=1]
-
-        label = torch.tensor(self.labels[idx][1])
-
-        problemType = torch.tensor([0])
-
-        res = Data(x=nodes, edge_index=edges, edge_attr=edge_attr, problemType=problemType), label
+        if self.cache is not None and idx not in self.cache:
+            self.cache[idx] = res
+        elif self.cache:
+            res = self.cache[idx]
 
         return res
 

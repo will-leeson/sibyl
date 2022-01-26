@@ -34,11 +34,14 @@ if __name__ == '__main__':
 	valLabels = [(key, [valFiles[key][item][0] for item in valFiles[key]]) for key in valFiles]
 	
 	testFiles = json.load(open("../../data/smtTestFiles.json"))
-	testLabels = [(key, [testFiles[key][item][0] for item in testFiles[key]]) for key in testFiles]
+	testLabels = [(key, [testFiles[key][item][0] for item in testFiles[key]]) for key in testFiles ]
 
-	train_set = SMTDataset(trainLabels, "../../data/smtFiles/", args.edge_sets)
-	val_set = SMTDataset(valLabels, "../../data/smtFiles/", args.edge_sets)
-	test_set = SMTDataset(testLabels, "../../data/smtFiles/", args.edge_sets)
+	dataLoc = "../../data/smtWUber/"
+
+	print(args.cache)
+	train_set = SMTDataset(trainLabels, dataLoc, args.edge_sets, args.cache)
+	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, args.cache)
+	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, args.cache)
 
 	#getWeights(trainLabels)
 
