@@ -66,6 +66,8 @@ class SMTDataset(GDataset):
             self.cache = dict()
         else:
             self.cache = None 
+        
+        self.problemTypes = {"QF_LIRA":0, "QF_LIA":1, "QF_IDL":2}
 
     def __len__(self):
         return len(self.labels)
@@ -94,7 +96,7 @@ class SMTDataset(GDataset):
 
             label = torch.tensor(self.labels[idx][1])
 
-            problemType = torch.tensor([0])
+            problemType = torch.tensor(self.problemTypes[self.labels[idx][0].split("/")[0]])
 
             res = Data(x=nodes, edge_index=edges, edge_attr=edge_attr, problemType=problemType), label
         
