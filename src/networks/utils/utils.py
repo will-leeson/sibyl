@@ -94,9 +94,6 @@ class SMTDataset(GDataset):
                 edges = torch.stack((edges[0][edge_attr!=1],edges[1][edge_attr!=1]))
                 edge_attr = edge_attr[edge_attr!=1]
 
-            print(self.labels[idx][1])
-            exit()
-
             label = torch.tensor(self.labels[idx][1])
 
             problemType = torch.tensor(self.problemTypes[self.labels[idx][0].split("/")[0]])
