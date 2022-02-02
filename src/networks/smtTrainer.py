@@ -25,13 +25,13 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	trainFiles = json.load(open("../../data/smtTrainFiles.json"))
-	trainLabels = [(key, [item[0] for item in trainFiles[key].values()]) for key in trainFiles]
+	trainLabels = [(key, [x[0] for x in trainFiles[key]]) for key in trainFiles]
 	
 	valFiles = json.load(open("../../data/smtValFiles.json"))
-	valLabels = [(key, [item[0] for item in valFiles[key].values()]) for key in valFiles]
+	valLabels = [(key,[x[0] for x in trainFiles[key]]) for key in trainFiles]
 	
 	testFiles = json.load(open("../../data/smtTestFiles.json"))
-	testLabels = [(key, [item[0] for item in testFiles[key].values()]) for key in testFiles]
+	testLabels = [(key, [x[0] for x in trainFiles[key]]) for key in trainFiles]
 
 	dataLoc = "../../data/smtFiles/"
 
