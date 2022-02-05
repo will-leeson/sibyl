@@ -247,19 +247,20 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
     
     return train_accuracies, train_losses, val_accuracies, val_losses
 
-def evaluate(model, test_set, gpu=0, k=3):
+def evaluate(model, test_set, division, gpu=0, k=3):
     '''
     Function used to evaluate model on test set
     '''
-    corr_sum = np.array([0.0]*4)
-    topKAcc = np.array([0.0]*4)
-    bestPredicts = np.array([0]*4)
-    correctPredicts = np.array([0]*4)
-    possibleCorrect = np.array([0]*4)
-    predSpot = np.array([[0]*test_set[0][1].size(0)]*4)
-    probCounter = np.array([0]*4)
+    numLogics=len(division)
+    corr_sum = np.array([0.0]*numLogics)
+    topKAcc = np.array([0.0]*numLogics)
+    bestPredicts = np.array([0]*numLogics)
+    correctPredicts = np.array([0]*numLogics)
+    possibleCorrect = np.array([0]*numLogics)
+    predSpot = np.array([[0]*test_set[0][1].size(0)]*numLogics)
+    probCounter = np.array([0]*numLogics)
 
-    predicted = np.array([[0]*test_set[0][1].size(0)]*5)
+    predicted = np.array([[0]*test_set[0][1].size(0)]*(numLogics+1))
 
     model.eval()
 
@@ -298,7 +299,7 @@ def evaluate(model, test_set, gpu=0, k=3):
             possibleCorrect[int(problemTypes.item())]+=1
         probCounter[int(problemTypes.item())]+=1
     
-    res = [[],[],[],[],[]]
+    res = [[] for _ in range(numLogics+1)]
     
     res[0] = np.array([corr_sum.sum()/probCounter.sum(), topKAcc.sum()/probCounter.sum(), bestPredicts.sum()/probCounter.sum(), correctPredicts.sum()/possibleCorrect.sum(), predSpot.sum(axis=0)], dtype=object)
     for i in range(0,len(res)-1):
