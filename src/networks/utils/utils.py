@@ -58,7 +58,7 @@ class GeometricDataset(GDataset):
         return res
 
 class SMTDataset(GDataset):
-    def __init__(self, labels, data_dir, edge_sets, should_cache=False):
+    def __init__(self, labels, data_dir, edge_sets, tracks, should_cache=False):
         self.labels = labels
         self.data_dir = data_dir
         self.edge_sets = edge_sets
@@ -67,7 +67,7 @@ class SMTDataset(GDataset):
         else:
             self.cache = None 
         
-        self.problemTypes = {"QF_LIRA":0, "QF_LIA":1, "QF_IDL":2}
+        self.problemTypes = tracks
 
     def __len__(self):
         return len(self.labels)

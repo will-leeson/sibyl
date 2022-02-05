@@ -20,24 +20,29 @@ if __name__ == '__main__':
 	parser.add_argument("-g", "--gpu", help="Which GPU should the model be on", default=0, type=int)
 	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
 	parser.add_argument("--no-jump", help="Whether or not to use jumping knowledge", action="store_false", default=True)
+	parser.add_argument("--track", help="The track to train the network on", type=type(""), required=True)
 
 
 	args = parser.parse_args()
 
-	trainFiles = json.load(open("../../data/smtTrainFiles.json"))
+	tracks = json.load(open("../../data/divisions.json"))
+
+	assert args.track in tracks
+
+	trainFiles = json.load(open("../../data/smtTrainFiles.json"))[args.track]
 	trainLabels = [(key, [x[0] for x in trainFiles[key]]) for key in trainFiles]
 	
-	valFiles = json.load(open("../../data/smtValFiles.json"))
+	valFiles = json.load(open("../../data/smtValFiles.json"))[args.track]
 	valLabels = [(key,[x[0] for x in trainFiles[key]]) for key in trainFiles]
 	
-	testFiles = json.load(open("../../data/smtTestFiles.json"))
+	testFiles = json.load(open("../../data/smtTestFiles.json"))[args.track]
 	testLabels = [(key, [x[0] for x in trainFiles[key]]) for key in trainFiles]
 
 	dataLoc = "../../data/smtFiles/"
 
-	train_set = SMTDataset(trainLabels, dataLoc, args.edge_sets, args.cache)
-	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, args.cache)
-	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, args.cache)
+	train_set = SMTDataset(trainLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
+	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
+	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
 
 	#getWeights(trainLabels)
 
