@@ -34,10 +34,10 @@ if __name__ == '__main__':
 	trainLabels = [(key, [x[0] for x in trainFiles[key]]) for key in trainFiles]
 	
 	valFiles = json.load(open("../../data/smtValFiles.json"))[args.track]
-	valLabels = [(key,[x[0] for x in trainFiles[key]]) for key in trainFiles]
+	valLabels = [(key,[x[0] for x in valFiles[key]]) for key in valFiles]
 	
 	testFiles = json.load(open("../../data/smtTestFiles.json"))[args.track]
-	testLabels = [(key, [x[0] for x in trainFiles[key]]) for key in trainFiles]
+	testLabels = [(key, [x[0] for x in testFiles[key]]) for key in testFiles]
 
 	dataLoc = "../../data/smtFiles/"
 
