@@ -5,6 +5,7 @@ from torch_geometric.data import Dataset as GDataset
 from torch_geometric.data import Data
 from torch.nn import MarginRankingLoss
 import torch
+from torch_geometric.utils import to_undirected
 from torch.utils.data import WeightedRandomSampler
 import torch.nn as nn
 import os, itertools, tqdm, json, time
@@ -58,10 +59,11 @@ class GeometricDataset(GDataset):
         return res
 
 class SMTDataset(GDataset):
-    def __init__(self, labels, data_dir, edge_sets, tracks, should_cache=False):
+    def __init__(self, labels, data_dir, edge_sets, tracks, undirected,should_cache=False):
         self.labels = labels
         self.data_dir = data_dir
         self.edge_sets = edge_sets
+        self.undirected = undirected
         if should_cache:
             self.cache = dict()
         else:
@@ -98,6 +100,8 @@ class SMTDataset(GDataset):
 
             problemType = torch.tensor(self.problemTypes[self.labels[idx][0].split("/")[0]])
 
+            if self.undirected:
+                edges, edge_attr = to_undirected(edge_index=edges, edge_attr=edge_attr)
             res = Data(x=nodes, edge_index=edges, edge_attr=edge_attr, problemType=problemType), label
         
         if self.cache is not None and idx not in self.cache:

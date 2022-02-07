@@ -21,6 +21,7 @@ if __name__ == '__main__':
 	parser.add_argument("-g", "--gpu", help="Which GPU should the model be on", default=0, type=int)
 	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
 	parser.add_argument("--no-jump", help="Whether or not to use jumping knowledge", action="store_false", default=True)
+	parser.add_argument("--undirected", help="Whether or not to use jumping knowledge", action="store_false", default=False)
 	parser.add_argument("--track", help="The track to train the network on", type=type(""), required=True)
 
 
@@ -41,9 +42,9 @@ if __name__ == '__main__':
 
 	dataLoc = "../../data/smtFiles/"
 
-	train_set = SMTDataset(trainLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
-	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
-	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
+	train_set = SMTDataset(trainLabels, dataLoc, args.edge_sets, tracks[args.track], args.undirected, args.cache)
+	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, tracks[args.track], args.undirected, args.cache)
+	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, tracks[args.track], args.undirected, args.cache)
 
 	#getWeights(trainLabels)
 
