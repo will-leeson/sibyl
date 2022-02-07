@@ -102,6 +102,7 @@ class SMTDataset(GDataset):
 
             if self.undirected:
                 edges, edge_attr = to_undirected(edge_index=edges, edge_attr=edge_attr)
+
             res = Data(x=nodes, edge_index=edges, edge_attr=edge_attr, problemType=problemType), label
         
         if self.cache is not None and idx not in self.cache:
