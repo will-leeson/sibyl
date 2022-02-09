@@ -92,10 +92,10 @@ class SMTDataset(GDataset):
                 edges = torch.stack((edges[0][edge_attr!=0],edges[1][edge_attr!=0]))
                 edge_attr = edge_attr[edge_attr!=0]
             if "Back-AST" not in self.edge_sets:
-                edges = torch.stack((edges[0][edge_attr!=0],edges[1][edge_attr!=1]))
+                edges = torch.stack((edges[0][edge_attr!=1],edges[1][edge_attr!=1]))
                 edge_attr = edge_attr[edge_attr!=1]
             if "Data" not in self.edge_sets:
-                edges = torch.stack((edges[0][edge_attr!=1],edges[1][edge_attr!=2]))
+                edges = torch.stack((edges[0][edge_attr!=2],edges[1][edge_attr!=2]))
                 edge_attr = edge_attr[edge_attr!=2]
 
             label = torch.tensor(self.labels[idx][1])

@@ -13,7 +13,7 @@ def handler(key):
         except zipfile.BadZipFile:
             print("../../data/smtFiles/" + key[:-5]+".npz")
             return -1
-        if len(a[0]) < 1.5e5:
+        if len(a[0]) < 3e5:
             return key
         else:
             return len(a[0])

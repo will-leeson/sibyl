@@ -46,7 +46,6 @@ if __name__ == '__main__':
 	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
 
 	#getWeights(trainLabels)
-
 	model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
 
 	loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)
