@@ -169,6 +169,8 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             allocated.append(torch.cuda.memory_allocated())
             graphs = graphs.to(device=gpu)
             labels = labels.to(device=gpu)
+            if torch.all(labels[0] == labels[0][0]):
+                continue
             if task == "success" and labels.max()<0:
                 pass
             success_counter+=1
@@ -186,7 +188,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             for j in range(len(labels)):
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum+=corr
-                assert corr <=1, str(scores) + " " + str(labels)
+                assert corr <=1, str(corr) + " " + str(scores) + " " + str(labels)
                 _, scoreTopk = scores.topk(k)
                 labelTopk = labels.argmax()
                 topk_acc += labelTopk in scoreTopk
@@ -273,6 +275,8 @@ def evaluate(model, test_set, division, gpu=0, k=3):
     for (i, (graphs,labels)) in enumerate(tqdm.tqdm(test_loader, leave=False)):
         graphs = graphs.to(device=gpu)
         labels = labels.to(device=gpu)
+        if torch.all(labels[0] == labels[0][0]):
+            continue
         problemTypes = graphs.problemType
         with autocast():
             with torch.no_grad():

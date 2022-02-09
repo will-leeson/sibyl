@@ -15,7 +15,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="GNN Trainer")
 	parser.add_argument("-t", "--time-steps", help="Number of timesteps (Default=0)", default=0, type=int)
 	parser.add_argument("-e", "--epochs", help="Number of training epochs (Default=20)", default=20, type=int)
-	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, Data(Default=All)", nargs='+', default=['AST', 'Data'], choices=['AST', 'Back-AST', 'Data'])
+	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, 'Back-AST', Data(Default=All)", nargs='+', default=['AST', 'Back-AST', 'Data'], choices=['AST', 'Back-AST', 'Data'])
 	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="cat", choices=['max', 'cat', 'lstm'])
 	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, sort, attention, multiset)", default="mean", choices=["max", "mean","add","sort","attention","multiset"])
 	parser.add_argument("-g", "--gpu", help="Which GPU should the model be on", default=0, type=int)
@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
-	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu, task='rank', k=3)
+	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu, task='rank', k=1)
 	train_acc, train_loss, val_acc, val_loss = report
 	res, pred = evaluate(model, test_set, tracks[args.track], gpu=args.gpu)
 	
