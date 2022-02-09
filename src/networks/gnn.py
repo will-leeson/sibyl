@@ -56,7 +56,7 @@ class GGNN(nn.Module):
         return x
 
 class GAT(torch.nn.Module):
-    def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize, numAttentionLayers, mode, pool, k, shouldJump=True):
+    def __init__(self, passes, inputLayerSize, outputLayerSize, numAttentionLayers, mode, pool, k, shouldJump=True):
         super(GAT, self).__init__()
         self.passes = passes
         self.mode = mode

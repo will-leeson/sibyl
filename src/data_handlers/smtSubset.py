@@ -7,16 +7,16 @@ import os, json, torch, tqdm, numpy as np
 resultFile = json.load(open("../../data/smt-CompResults.json"))
 
 def handler(key):
-    if key == "../../data/smtFiles/QF_UFDT/20210312-Bouvier/vlsat3_k97.smt":
-        print(key)
     if os.path.isfile("../../data/smtFiles/" + key[:-5]+".npz"):
         try:
             a = np.load("../../data/smtFiles/" + key[:-5]+".npz")['edges']
         except zipfile.BadZipFile:
             print("../../data/smtFiles/" + key[:-5]+".npz")
-            return None
-        if len(a[0]) < 3e5:
+            return -1
+        if len(a[0]) < 1.5e5:
             return key
+        else:
+            return len(a[0])
     return None
 
 total_processors = int(8)
@@ -32,15 +32,24 @@ for track in resultFile:
 
     # Get the results
     results = []
+    tooBig = []
+    numTooBig = 0
     for job in tqdm.tqdm(jobs):
         a = job.get()
         if a is not None:
-            results.append(a)
+            if type(a) != type("") :
+                tooBig.append(a)
+                numTooBig+=1
+            else:
+                results.append(a)
+
 
     trainFiles,valFiles,testFiles = torch.utils.data.random_split(results, [len(results) - (len(results)//10) - (len(results)//10),len(results)//10, len(results)//10])
 
-
     print("Track:", track)
+    print("Num Too Big:", numTooBig)
+    if tooBig:
+        print("Too big size:", np.mean(tooBig), "+-", np.std(tooBig))
     for key in list(trainFiles):
         trainFileDict[track][key] = resultFile[track][key]
     print("Train File size:",len(trainFileDict[track]))

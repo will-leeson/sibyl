@@ -15,13 +15,12 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="GNN Trainer")
 	parser.add_argument("-t", "--time-steps", help="Number of timesteps (Default=0)", default=0, type=int)
 	parser.add_argument("-e", "--epochs", help="Number of training epochs (Default=20)", default=20, type=int)
-	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, Data(Default=All)", nargs='+', default=['AST', 'Data'], choices=['AST', 'Data'])
+	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, Data(Default=All)", nargs='+', default=['AST', 'Data'], choices=['AST', 'Back-AST', 'Data'])
 	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="cat", choices=['max', 'cat', 'lstm'])
 	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, sort, attention, multiset)", default="mean", choices=["max", "mean","add","sort","attention","multiset"])
 	parser.add_argument("-g", "--gpu", help="Which GPU should the model be on", default=0, type=int)
 	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
 	parser.add_argument("--no-jump", help="Whether or not to use jumping knowledge", action="store_false", default=True)
-	parser.add_argument("--undirected", help="Whether or not to use jumping knowledge", action="store_true", default=False)
 	parser.add_argument("--track", help="The track to train the network on", type=type(""), required=True)
 
 
@@ -42,13 +41,13 @@ if __name__ == '__main__':
 
 	dataLoc = "../../data/smtFiles/"
 
-	train_set = SMTDataset(trainLabels, dataLoc, args.edge_sets, tracks[args.track], args.undirected, args.cache)
-	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, tracks[args.track], args.undirected, args.cache)
-	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, tracks[args.track], args.undirected, args.cache)
+	train_set = SMTDataset(trainLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
+	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
+	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
 
 	#getWeights(trainLabels)
 
-	model = GAT(passes=args.time_steps, numEdgeSets=len(args.edge_sets), numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
+	model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
 
 	loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)
 

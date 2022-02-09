@@ -59,11 +59,10 @@ class GeometricDataset(GDataset):
         return res
 
 class SMTDataset(GDataset):
-    def __init__(self, labels, data_dir, edge_sets, tracks, undirected,should_cache=False):
+    def __init__(self, labels, data_dir, edge_sets, tracks,should_cache=False):
         self.labels = labels
         self.data_dir = data_dir
         self.edge_sets = edge_sets
-        self.undirected = undirected
         if should_cache:
             self.cache = dict()
         else:
@@ -92,16 +91,16 @@ class SMTDataset(GDataset):
             if "AST" not in self.edge_sets:
                 edges = torch.stack((edges[0][edge_attr!=0],edges[1][edge_attr!=0]))
                 edge_attr = edge_attr[edge_attr!=0]
-            if "Data" not in self.edge_sets:
-                edges = torch.stack((edges[0][edge_attr!=1],edges[1][edge_attr!=1]))
+            if "Back-AST" not in self.edge_sets:
+                edges = torch.stack((edges[0][edge_attr!=0],edges[1][edge_attr!=1]))
                 edge_attr = edge_attr[edge_attr!=1]
+            if "Data" not in self.edge_sets:
+                edges = torch.stack((edges[0][edge_attr!=1],edges[1][edge_attr!=2]))
+                edge_attr = edge_attr[edge_attr!=2]
 
             label = torch.tensor(self.labels[idx][1])
 
             problemType = torch.tensor(self.problemTypes[self.labels[idx][0].split("/")[0]])
-
-            if self.undirected:
-                edges, edge_attr = to_undirected(edge_index=edges, edge_attr=edge_attr)
 
             res = Data(x=nodes, edge_index=edges, edge_attr=edge_attr, problemType=problemType), label
         
