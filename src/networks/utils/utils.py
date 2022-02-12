@@ -314,6 +314,66 @@ def evaluate(model, test_set, division, gpu=0, k=3):
         res[i+1] = np.array([corr_sum[i]/probCounter[i], topKAcc[i]/probCounter[i], bestPredicts[i]/probCounter[i], correctPredicts[i]/possibleCorrect[i], predSpot[i]], dtype=object)
 
     return res, predicted
+
+def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
+    '''
+    Function used to evaluate model on test set
+    '''
+    corr_sum = 0.0
+    topKAcc = 0.0
+    bestPredicts = 0
+    correctPredicts = 0
+    possibleCorrect = 0
+    par2Score = 0
+    predSpot = np.array([0]*test_set[0][1].size(0))
+    probCounter = np.array([0])
+
+    predicted = np.array([0]*test_set[0][1].size(0))
+
+    model.eval()
+
+    test_loader = torch_geometric.loader.DataLoader(dataset=test_set, batch_size=1)
+
+    for (i, (graphs,labels)) in enumerate(tqdm.tqdm(test_loader, leave=False)):
+        graphs = graphs.to(device=gpu)
+        labels = labels.to(device=gpu)
+        if torch.all(labels[0] == labels[0][0]):
+            continue
+        problemTypes = graphs.problemType
+        with autocast():
+            with torch.no_grad():
+                scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
+
+        for j in range(len(labels)):
+            corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
+            corr_sum += corr
+            _, scoreTopk = scores.topk(k)
+            labelTopk = labels.argmax()
+            topKAcc += labelTopk in scoreTopk
+
+        bestPredicts += (scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
+
+        par2Score += test_times[i][1][scores.argmax(dim=1)] if labels[0][scores.argmax(dim=1)] > 0 else 2400
+
+        for idx in scores.argmax(dim=1):
+            predicted[idx.item()]+=1
+
+        maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
+        gather = labels.gather(1, maxScoresIdx)
+        if labels.min()<=0:
+            correctPredicts+=(gather>0).sum().item()
+
+        predSpot[np.where((-labels).argsort().cpu().numpy()==scores.argmax().item())[1]] +=1
+
+        if labels.max() > 0 and labels.min()<=0:
+            possibleCorrect+=1
+        probCounter+=1
+        
+    res = np.array([corr_sum/probCounter, topKAcc/probCounter, bestPredicts/probCounter, correctPredicts/possibleCorrect, predSpot, par2Score], dtype=object)
+
+    return res, predicted
+
+
 def getCorrectProblemTypes(labels, problemTypes):
     '''
     Function used to make sure we are only looking at problem types that we want
