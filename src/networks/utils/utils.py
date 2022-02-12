@@ -335,8 +335,9 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
     test_loader = torch_geometric.loader.DataLoader(dataset=test_set, batch_size=1)
 
     for (i, (graphs,labels)) in enumerate(tqdm.tqdm(test_loader, leave=False)):
-        graphs = graphs.to(device=gpu)
-        labels = labels.to(device=gpu)
+        if gpu != False:
+            graphs = graphs.to(device=gpu)
+            labels = labels.to(device=gpu)
         if torch.all(labels[0] == labels[0][0]):
             continue
         problemTypes = graphs.problemType
