@@ -1,6 +1,6 @@
 from __future__ import division
 from gnn import GAT
-from utils.utils import ModifiedMarginRankingLoss, train_model, evaluate, SMTDataset
+from utils.utils import ModifiedMarginRankingLoss, train_model, smtEvaluate, SMTDataset, getWeights
 import torch, json, time, argparse
 import torch.optim as optim
 import numpy as np
@@ -38,6 +38,7 @@ if __name__ == '__main__':
 	
 	testFiles = json.load(open("../../data/smtTestFiles.json"))[args.track]
 	testLabels = [(key, [x[0] for x in testFiles[key]]) for key in testFiles]
+	testTimes = [(key, [x[1] for x in testFiles[key]]) for key in testFiles]
 
 	dataLoc = "../../data/smtFiles/"
 
@@ -45,16 +46,21 @@ if __name__ == '__main__':
 	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
 	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
 
-	#getWeights(trainLabels)
+	trainWeights = getWeights(labels=trainLabels)
+	valWeights = getWeights(labels=valLabels)
+
+	# trainWeights = None
+	# valWeights = None
+
 	model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
 
 	loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)
 
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
-	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu, task='rank', k=1)
+	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu, task='rank', k=1, trainWeights=trainWeights, valWeights=valWeights)
 	train_acc, train_loss, val_acc, val_loss = report
-	res, pred = evaluate(model, test_set, tracks[args.track], gpu=args.gpu)
+	res, pred = smtEvaluate(model, test_set, testTimes, gpu=args.gpu)
 	
 	returnString = str(args).replace("\'","").replace(",","").strip("Namespace").strip("(").strip(")").replace(" ","_") + "_" + str(int(time.time()))
 

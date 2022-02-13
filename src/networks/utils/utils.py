@@ -335,7 +335,7 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
     test_loader = torch_geometric.loader.DataLoader(dataset=test_set, batch_size=1)
 
     for (i, (graphs,labels)) in enumerate(tqdm.tqdm(test_loader, leave=False)):
-        if gpu != False:
+        if gpu != 'cpu':
             graphs = graphs.to(device=gpu)
             labels = labels.to(device=gpu)
         if torch.all(labels[0] == labels[0][0]):
@@ -406,8 +406,8 @@ def groupLabels(labels, mapping="../../data/toolMapping.json"):
     assert(len(newLabels) == len(labels))
     return newLabels
 
-def getWeights(train_set):
-    labels = np.array([x[1] for x in train_set])
+def getWeights(labels):
+    labels = np.array([x[1] for x in labels])
     weightDict = {tuple(t):1./sum(np.all(labels.argsort() == t, axis=1)) for t in np.unique(labels.argsort(),axis=0)}
 
     return [weightDict[tuple(t)] for t in labels.argsort()]
