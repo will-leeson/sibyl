@@ -30,15 +30,15 @@ if __name__ == '__main__':
 
 	assert args.track in tracks
 
-	trainFiles = json.load(open("../../data/smtTrainFiles.json"))[args.track]
-	trainLabels = [(key, [x[0] for x in trainFiles[key]]) for key in trainFiles]
+	trainFiles = json.load(open("../../data/smtTrainFilesPar2.json"))[args.track]
+	trainLabels = [(key, trainFiles[key]) for key in trainFiles]
 	
-	valFiles = json.load(open("../../data/smtValFiles.json"))[args.track]
-	valLabels = [(key,[x[0] for x in valFiles[key]]) for key in valFiles]
+	valFiles = json.load(open("../../data/smtValFilesPar2.json"))[args.track]
+	valLabels = [(key, valFiles[key]) for key in valFiles]
 	
-	testFiles = json.load(open("../../data/smtTestFiles.json"))[args.track]
-	testLabels = [(key, [x[0] for x in testFiles[key]]) for key in testFiles]
-	testTimes = [(key, [x[1] for x in testFiles[key]]) for key in testFiles]
+	testFiles = json.load(open("../../data/smtTestFilesPar2.json"))[args.track]
+	testLabels = [(key, testFiles[key]) for key in testFiles]
+	testTimes = [(key, testFiles[key]) for key in testFiles]
 
 	dataLoc = "../../data/smtFiles/"
 
@@ -46,15 +46,16 @@ if __name__ == '__main__':
 	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
 	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
 
-	trainWeights = getWeights(labels=trainLabels)
-	valWeights = getWeights(labels=valLabels)
+	# trainWeights = getWeights(labels=trainLabels)
+	# valWeights = getWeights(labels=valLabels)
 
-	# trainWeights = None
-	# valWeights = None
+	trainWeights = None
+	valWeights = None
 
 	model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
 
 	loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)
+	#loss_fn = torch.nn.NLLLoss()
 
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)

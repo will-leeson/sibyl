@@ -169,37 +169,37 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             allocated.append(torch.cuda.memory_allocated())
             graphs = graphs.to(device=gpu)
             labels = labels.to(device=gpu)
-            if torch.all(labels[0] == labels[0][0]):
+            if task == "success" and labels.min()<2400:
                 continue
-            if task == "success" and labels.max()<0:
-                pass
-            success_counter+=1
+            if labels.min()<2400:
+                success_counter+=1
 
             with autocast():
                 scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
+
                 if task == "rank":
                     loss = loss_fn(scores, labels)
                     cum_loss+=loss.cpu().detach().item()
                 elif task == "topk" or task == "success":
-                    loss = loss_fn(nn.functional.log_softmax(scores, dim=1), labels.argmax(dim=1))    
+                    loss = loss_fn(nn.functional.log_softmax(scores, dim=1), labels.argmin(dim=1))    
                     cum_loss+=loss.cpu().detach().item()
-
-
-            for j in range(len(labels)):
-                corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
-                corr_sum+=corr
-                assert corr <=1, str(corr) + " " + str(scores) + " " + str(labels)
-                _, scoreTopk = scores.topk(k)
-                labelTopk = labels.argmax()
-                topk_acc += labelTopk in scoreTopk
-                
-                success_acc += 1 if labels[j][scores.argmax()]>0 else 0
-
 
             optimizer.zero_grad()
             loss.backward()
             model.float()
             optimizer.step()
+
+            for j in range(len(labels)):
+                if torch.all(labels[0] == labels[0][0]):
+                    continue
+                corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
+                corr_sum+=corr
+                assert corr <=1, str(corr) + " " + str(scores) + " " + str(labels)
+                _, scoreTopk = (-scores).topk(k)
+                labelTopk = labels.argmin()
+                topk_acc += labelTopk in scoreTopk
+                
+                success_acc += 1 if labels[j][scores.argmin()]<2400 else 0
 
             if (((i+1)/round(len(trainset), -2))*100)%10==0 or (i+1)==len(train_loader):
                 mystr = "Train-epoch "+ str(epoch) + ", Avg-Loss: "+ str(round(cum_loss/((i+1)*batchSize), 4)) + ", Avg-Corr:" +  str(round(corr_sum/((i+1)*batchSize), 4)) + ", TopK-Acc:"+str(round(topk_acc/((i+1)*batchSize), 4)) + ", Success-Acc:"+str(round(success_acc/success_counter,4))
@@ -221,24 +221,27 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             labels = labels.to(device=gpu)
             if task == "success" and labels.max()<0:
                 pass
-            success_counter+=1
+            if labels.min()<2400:
+                success_counter+=1
             with autocast():
                 with torch.no_grad():
                     scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
                     if task == "rank":
                         loss = loss_fn(scores, labels)
                     elif task == "topk" or task == "success":
-                        loss = loss_fn(nn.functional.log_softmax(scores, dim=1), labels.argmax(dim=1))    
+                        loss = loss_fn(nn.functional.log_softmax(scores, dim=1), labels.argmin(dim=1))    
                     cum_loss+=loss.cpu().detach().item()
 
             for j in range(len(labels)):
+                if torch.all(labels[0] == labels[0][0]):
+                    continue
                 corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
                 corr_sum += corr
-                _, scoreTopk = scores.topk(k)
-                labelTopk = labels.argmax()
+                _, scoreTopk = (-scores).topk(k)
+                labelTopk = labels.argmin()
                 topk_acc += labelTopk in scoreTopk
 
-                success_acc += 1 if labels[j][scores.argmax()]>0 else 0
+                success_acc += 1 if labels[j][scores.argmin()]<2400 else 0
 
         scheduler.step(cum_loss/(i+1))
 
@@ -348,15 +351,14 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
         for j in range(len(labels)):
             corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
             corr_sum += corr
-            _, scoreTopk = scores.topk(k)
-            labelTopk = labels.argmax()
+            _, scoreTopk = (-scores).topk(k)
+            labelTopk = labels.argmin()
             topKAcc += labelTopk in scoreTopk
 
-        bestPredicts += (scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
+        bestPredicts += (scores.argmin(dim=1) == labels.argmin(dim=1)).sum().item()
+        par2Score += labels[0][scores.argmin()].cpu().item()
 
-        par2Score += test_times[i][1][scores.argmax(dim=1)] if labels[0][scores.argmax(dim=1)] > 0 else 2400
-
-        for idx in scores.argmax(dim=1):
+        for idx in scores.argmin(dim=1):
             predicted[idx.item()]+=1
 
         maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
@@ -364,9 +366,9 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
         if labels.min()<=0:
             correctPredicts+=(gather>0).sum().item()
 
-        predSpot[np.where((-labels).argsort().cpu().numpy()==scores.argmax().item())[1]] +=1
+        predSpot[np.where(labels.argsort().cpu().numpy()==scores.argmin().item())[1]] +=1
 
-        if labels.max() > 0 and labels.min()<=0:
+        if labels.min() < 2400:
             possibleCorrect+=1
         probCounter+=1
         
