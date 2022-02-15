@@ -113,9 +113,9 @@ class GAT(torch.nn.Module):
         
         x = torch.cat((x.reshape(1,x.size(0)*x.size(1)), problemType.unsqueeze(1)), dim=1)
         
-        x = self.fc1(x)
+        x = self.fc1(self.dropout(x))
         x = f.leaky_relu(x)
-        x = self.fc2(x)
+        x = self.fc2(self.dropout(x))
         x = f.leaky_relu(x)
         x = self.fcLast(self.dropout(x))
 
