@@ -408,8 +408,16 @@ def groupLabels(labels, mapping="../../data/toolMapping.json"):
     assert(len(newLabels) == len(labels))
     return newLabels
 
-def getWeights(labels):
-    labels = np.array([x[1] for x in labels])
-    weightDict = {tuple(t):1./sum(np.all(labels.argsort() == t, axis=1)) for t in np.unique(labels.argsort(),axis=0)}
+def getWeights(labels, choice):
+    if choice=='best':
+        labels = np.array([x[1] for x in labels])
+        weightDict = {t:1./sum(labels.argmin(axis=1) == t) for t in np.unique(labels.argmin(axis=1))}
 
-    return [weightDict[tuple(t)] for t in labels.argsort()]
+        return [weightDict[t] for t in labels.argmin(axis=1)]
+    elif choice=='order':
+        labels = np.array([x[1] for x in labels])
+        weightDict = {tuple(t):1./sum(np.all(labels.argsort() == t, axis=1)) for t in np.unique(labels.argsort(),axis=0)}
+
+        return [weightDict[tuple(t)] for t in labels.argsort()]
+    else:
+        return None

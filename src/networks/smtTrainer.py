@@ -21,10 +21,14 @@ if __name__ == '__main__':
 	parser.add_argument("-g", "--gpu", help="Which GPU should the model be on", default=0, type=int)
 	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
 	parser.add_argument("--no-jump", help="Whether or not to use jumping knowledge", action="store_false", default=True)
+	parser.add_argument("--data-weight", help="How to weight dataset: order, best, none (Default=none)", default='none', choices=['order','best','none'])
+	parser.add_argument("--dropout", help="Dropout Value (Default:0)", default=0, type=float)
 	parser.add_argument("--track", help="The track to train the network on", type=type(""), required=True)
 
 
 	args = parser.parse_args()
+	print(args.data_weight)
+	print(args.dropout)
 
 	tracks = json.load(open("../../data/divisions.json"))
 
@@ -46,13 +50,13 @@ if __name__ == '__main__':
 	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
 	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
 
-	# trainWeights = getWeights(labels=trainLabels)
-	# valWeights = getWeights(labels=valLabels)
+	trainWeights = getWeights(labels=trainLabels, choice=args.data_weight)
+	valWeights = getWeights(labels=valLabels, choice=args.data_weight)
 
-	trainWeights = None
-	valWeights = None
+	#trainWeights = None
+	#valWeights = None
 
-	model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
+	model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, dropout=args.dropout, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
 
 	loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)
 	#loss_fn = torch.nn.NLLLoss()
