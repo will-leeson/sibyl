@@ -23,32 +23,36 @@ if __name__ == '__main__':
 	parser.add_argument("--no-jump", help="Whether or not to use jumping knowledge", action="store_false", default=True)
 	parser.add_argument("--data-weight", help="How to weight dataset: order, best, none (Default=none)", default='none', choices=['order','best','none'])
 	parser.add_argument("--dropout", help="Dropout Value (Default:0)", default=0, type=float)
-	parser.add_argument("--track", help="The track to train the network on", type=type(""), required=True)
+	parser.add_argument("--track", help="The track to train the network on", type=type(""), default=None)
 
 
 	args = parser.parse_args()
-	print(args.data_weight)
-	print(args.dropout)
 
-	tracks = json.load(open("../../data/divisions.json"))
 
-	assert args.track in tracks
-
-	trainFiles = json.load(open("../../data/smtTrainFilesPar2.json"))[args.track]
+	if args.track:
+		tracks = json.load(open("../../data/divisions.json"))
+		assert args.track in tracks
+		tracks = tracks[args.track]
+		trainFiles = json.load(open("../../data/kleeTrainFiles.json"))[args.track]
+		valFiles = json.load(open("../../data/kleeValFiles.json"))[args.track]
+		testFiles = json.load(open("../../data/kleeTestFiles.json"))[args.track]
+	else:
+		tracks=None
+		trainFiles = json.load(open("../../data/kleeTrainFiles.json"))
+		valFiles = json.load(open("../../data/kleeValFiles.json"))
+		testFiles = json.load(open("../../data/kleeTestFiles.json"))
+	
 	trainLabels = [(key, trainFiles[key]) for key in trainFiles]
-	
-	valFiles = json.load(open("../../data/smtValFilesPar2.json"))[args.track]
 	valLabels = [(key, valFiles[key]) for key in valFiles]
-	
-	testFiles = json.load(open("../../data/smtTestFilesPar2.json"))[args.track]
 	testLabels = [(key, testFiles[key]) for key in testFiles]
+
 	testTimes = [(key, testFiles[key]) for key in testFiles]
 
-	dataLoc = "../../data/smtFiles/"
+	dataLoc = "../../data/SMTKlee/"
 
-	train_set = SMTDataset(trainLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
-	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
-	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, tracks[args.track], args.cache)
+	train_set = SMTDataset(trainLabels, dataLoc, args.edge_sets, tracks, args.cache)
+	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, tracks, args.cache)
+	test_set = SMTDataset(testLabels, dataLoc, args.edge_sets, tracks, args.cache)
 
 	trainWeights = getWeights(labels=trainLabels, choice=args.data_weight)
 	valWeights = getWeights(labels=valLabels, choice=args.data_weight)

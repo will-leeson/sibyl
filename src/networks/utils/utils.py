@@ -59,7 +59,7 @@ class GeometricDataset(GDataset):
         return res
 
 class SMTDataset(GDataset):
-    def __init__(self, labels, data_dir, edge_sets, tracks,should_cache=False):
+    def __init__(self, labels, data_dir, edge_sets, tracks=None,should_cache=False):
         self.labels = labels
         self.data_dir = data_dir
         self.edge_sets = edge_sets
@@ -100,7 +100,10 @@ class SMTDataset(GDataset):
 
             label = torch.tensor(self.labels[idx][1])
 
-            problemType = torch.tensor(self.problemTypes[self.labels[idx][0].split("/")[0]])
+            if self.problemTypes:
+                problemType = torch.tensor(self.problemTypes[self.labels[idx][0].split("/")[0]])
+            else:
+                problemType = torch.tensor(0)
 
             res = Data(x=nodes, edge_index=edges, edge_attr=edge_attr, problemType=problemType), label
         
