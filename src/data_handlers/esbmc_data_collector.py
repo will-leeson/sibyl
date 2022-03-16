@@ -4,6 +4,7 @@ import os
 
 pathToESBMC = argv[1]
 program = argv[2]
+outputPath = argv[3]
 
 if not os.path.exists(pathToESBMC):
     print("The first argument to this program should be the path to ESBMC")
@@ -15,6 +16,12 @@ if not os.path.exists(program):
     print("The second argument to this program should be a C program for ESBMC to verify")
     print("It looks like it doesn't exist")
     print("Please provide a C program")
+    exit(1)
+
+if not os.path.isdir(outputPath):
+    print("The third argument to this program should be a directory to place output")
+    print("It looks like it doesn't exist or it isn't a diectory")
+    print("Please provide a directory")
     exit(1)
 
 arguments = [pathToESBMC, "--smt-formula-too", "--verbosity=9", "--k-induction", \
@@ -29,7 +36,7 @@ smtFile = None
 for line in iter(result.stdout.readline, b''):  # replace '' with b'' for Python 3
     line = line.decode()
     if "(set-logic" in line:
-        smtFile = open(os.path.splitext(os.path.basename(program))[0]+"_"+str(counter)+".smt2", 'w')
+        smtFile = open(outputPath+os.path.splitext(os.path.basename(program))[0]+"_"+str(counter)+".smt2", 'w')
         smtFile.write(line)
         counter+=1
     elif "(exit)" in line:
