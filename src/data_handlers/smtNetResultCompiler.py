@@ -2,7 +2,7 @@ import glob, csv, os, re
 import numpy as np
 from matplotlib import pyplot as plt
 
-name="smt2"
+name="kleeBalanceFull"
 
 resultsFiles = glob.glob(name+"/*.npz")
 
@@ -13,7 +13,7 @@ topKFile = csv.writer(open("topK_"+result+"_"+name+"Data.csv", 'w'), delimiter="
 
 collatedData = dict()
 topkDict = dict()
-rawDataFile.writerow(["numPasses", "pool", "mode", "trainginData", "hasAST", "hasData", "undirected", "data_weight", "dropout", "corr", "par2", "file"])
+rawDataFile.writerow(["numPasses", "pool", "mode", "trainginData", "hasAST", "hasData", "hasBackAst", "data_weight", "dropout", "corr", "par2", "file"])
 
 full = []
 maxTen = {}
@@ -26,9 +26,9 @@ for aFile in resultsFiles:
     dropout = float((aFile.split("dropout=")[1]).split("_")[0])
 
 
-    hasAST = "AST" in aFile
+    hasAST = "[AST" in aFile
     hasData = "Data" in aFile
-    undirected = "undirected=True" in aFile
+    hasBackAST = "Back-AST" in aFile
 
 
     data = np.load(aFile, allow_pickle=True)[result]
@@ -45,24 +45,24 @@ for aFile in resultsFiles:
 
     if numPasses == "0":
         hasAST, hasData = "N/A", "N/A"
-    if (numPasses,  pool, mode, trainingData, hasAST, hasData, undirected, data_weight, dropout) in maxTen:
-        if  maxTen[(numPasses, pool, mode, trainingData, hasAST, hasData, undirected, data_weight, dropout)] < 10:
-            maxTen[(numPasses, pool, mode, trainingData, hasAST, hasData, undirected, data_weight, dropout)]+=1
+    if (numPasses,  pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout) in maxTen:
+        if  maxTen[(numPasses, pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout)] < 10:
+            maxTen[(numPasses, pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout)]+=1
         else:
             print(os.path.basename(aFile))
             os.rename(aFile,"extras/"+os.path.basename(aFile))
             continue
     else:
-        maxTen[(numPasses,  pool, mode, trainingData, hasAST, hasData, undirected, dropout)]=1
-    rawDataFile.writerow([numPasses ,pool, mode, trainingData, hasAST, hasData, undirected, data_weight, dropout, corr, par2, aFile])
-    if (numPasses,  pool, mode, trainingData, hasAST, hasData, undirected, data_weight, dropout) in collatedData:
-        collatedData[(numPasses,  pool, mode, trainingData, hasAST, hasData,undirected, data_weight, dropout)].append([corr, topk, correct, par2]) 
-        topkDict[(numPasses,  pool, mode, trainingData, hasAST, hasData, undirected, data_weight, dropout)].append(topkChoices)
+        maxTen[(numPasses,  pool, mode, trainingData, hasAST, hasData, hasBackAST, dropout)]=1
+    rawDataFile.writerow([numPasses ,pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout, corr, par2, aFile])
+    if (numPasses,  pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout) in collatedData:
+        collatedData[(numPasses,  pool, mode, trainingData, hasAST, hasData,hasBackAST, data_weight, dropout)].append([corr, topk, correct, par2]) 
+        topkDict[(numPasses,  pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout)].append(topkChoices)
     else:
-        collatedData[(numPasses,  pool, mode, trainingData, hasAST, hasData, undirected, data_weight, dropout)] = [[corr, topk, correct, par2]]
-        topkDict[(numPasses,  pool, mode, trainingData, hasAST,hasData, undirected, data_weight, dropout)] = [topkChoices]
+        collatedData[(numPasses,  pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout)] = [[corr, topk, correct, par2]]
+        topkDict[(numPasses,  pool, mode, trainingData, hasAST,hasData, hasBackAST, data_weight, dropout)] = [topkChoices]
 
-collatedDataFile.writerow(["numPasses", "pool", "mode", "trainginData", "hasAST", "hasData", "undirected", "data_weight", "dropout","corrMean", "corrSTD", "topk", "topkSTD", "correct", "correctSTD", "par2Mean", "par2STD", "num"])
+collatedDataFile.writerow(["numPasses", "pool", "mode", "trainginData", "hasAST", "hasData", "hasBackAST", "data_weight", "dropout","corrMean", "corrSTD", "topk", "topkSTD", "correct", "correctSTD", "par2Mean", "par2STD", "num"])
 for key in collatedData:
     corrsMean = np.mean([x[0] for x in collatedData[key]])
     corrsStd =  np.std([x[0] for x in collatedData[key]])
@@ -78,7 +78,7 @@ for key in collatedData:
 for key in collatedData:
     collatedDataFile.writerow(list(key)+collatedData[key])
 
-topKFile.writerow(["numPasses","pool", "mode", "trainginData", "hasAST", "hasData", "undirected"])
+topKFile.writerow(["numPasses","pool", "mode", "trainginData", "hasAST", "hasData", "hasBackAST"])
 for key in topkDict:
     vals = np.array(topkDict[key])
     vals = np.array([[1-sum(data[0:x+1])/sum(data) for x in range(len(data))] for data in vals])
