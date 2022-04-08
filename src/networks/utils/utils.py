@@ -66,7 +66,7 @@ class SMTDataset(GDataset):
         if should_cache:
             self.cache = dict()
         else:
-            self.cache = None 
+            self.cache = None
         
         self.problemTypes = tracks
 
@@ -80,9 +80,9 @@ class SMTDataset(GDataset):
             
             try:
                 data = np.load(path)
-            except ValueError:
+            except FileNotFoundError:
                 print(path)
-                exit()
+                return (None, None)
 
             nodes = torch.tensor(data['nodes']).float()
             edges = torch.tensor(data['edges']).long()
