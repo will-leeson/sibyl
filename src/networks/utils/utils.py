@@ -272,7 +272,7 @@ def evaluate(model, test_set, division, gpu=0, k=3):
     predSpot = np.array([[0]*test_set[0][1].size(0)]*numLogics)
     probCounter = np.array([0]*numLogics)
 
-    predicted = np.array([[0]*test_set[0][1].size(0)]*(numLogics+1))
+    predicted = []
 
     model.eval()
 
@@ -288,6 +288,8 @@ def evaluate(model, test_set, division, gpu=0, k=3):
             with torch.no_grad():
                 scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
 
+        predicted.append(scores)
+
         for j in range(len(labels)):
             corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
             corr_sum[int(problemTypes.item())] += corr
@@ -296,10 +298,6 @@ def evaluate(model, test_set, division, gpu=0, k=3):
             topKAcc[int(problemTypes.item())] += labelTopk in scoreTopk
 
         bestPredicts[int(problemTypes.item())] += (scores.argmax(dim=1) == labels.argmax(dim=1)).sum().item()
-
-        for idx in scores.argmax(dim=1):
-            predicted[0][idx.item()]+=1
-            predicted[int(problemTypes.item())+1][idx.item()]+=1
 
         maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
         gather = labels.gather(1, maxScoresIdx)
@@ -319,6 +317,7 @@ def evaluate(model, test_set, division, gpu=0, k=3):
     for i in range(0,len(res)-1):
         res[i+1] = np.array([corr_sum[i]/probCounter[i], topKAcc[i]/probCounter[i], bestPredicts[i]/probCounter[i], correctPredicts[i]/possibleCorrect[i], predSpot[i]], dtype=object)
 
+    predicted = np.array(predicted)
     return res, predicted
 
 def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
@@ -334,7 +333,7 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
     predSpot = np.array([0]*test_set[0][1].size(0))
     probCounter = np.array([0])
 
-    predicted = np.array([0]*test_set[0][1].size(0))
+    predicted = []
 
     model.eval()
 
@@ -344,8 +343,7 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
         if gpu != 'cpu':
             graphs = graphs.to(device=gpu)
             labels = labels.to(device=gpu)
-        if torch.all(labels[0] == labels[0][0]):
-            continue
+            
         problemTypes = graphs.problemType
         with autocast():
             with torch.no_grad():
@@ -361,8 +359,7 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
         bestPredicts += (scores.argmin(dim=1) == labels.argmin(dim=1)).sum().item()
         par2Score += labels[0][scores.argmin()].cpu().item()
 
-        for idx in scores.argmin(dim=1):
-            predicted[idx.item()]+=1
+        predicted.append(scores)
 
         maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
         gather = labels.gather(1, maxScoresIdx)
@@ -377,6 +374,7 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
         
     res = np.array([corr_sum/probCounter, topKAcc/probCounter, bestPredicts/probCounter, correctPredicts/possibleCorrect, predSpot, par2Score], dtype=object)
 
+    predicted = np.array(predicted)
     return res, predicted
 
 
