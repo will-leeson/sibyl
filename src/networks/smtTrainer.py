@@ -16,7 +16,7 @@ if __name__ == '__main__':
 	parser.add_argument("-t", "--time-steps", help="Number of timesteps (Default=0)", default=0, type=int)
 	parser.add_argument("-e", "--epochs", help="Number of training epochs (Default=20)", default=20, type=int)
 	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, 'Back-AST', Data(Default=All)", nargs='+', default=['AST', 'Back-AST', 'Data'], choices=['AST', 'Back-AST', 'Data'])
-	parser.add_argument("-m", "--mode", help="Mode for jumping (Default LSTM): max, cat, lstm", default="cat", choices=['max', 'cat', 'lstm'])
+	parser.add_argument("-m", "--mode", help="Mode for jumping (Default cat): max, cat, lstm", default="cat", choices=['max', 'cat', 'lstm'])
 	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, sort, attention, multiset)", default="mean", choices=["max", "mean","add","sort","attention","multiset"])
 	parser.add_argument("-g", "--gpu", help="Which GPU should the model be on", default=0, type=int)
 	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
@@ -24,23 +24,27 @@ if __name__ == '__main__':
 	parser.add_argument("--data-weight", help="How to weight dataset: order, best, none (Default=none)", default='none', choices=['order','best','none'])
 	parser.add_argument("--dropout", help="Dropout Value (Default:0)", default=0, type=float)
 	parser.add_argument("--track", help="The track to train the network on", type=type(""), default=None)
+	parser.add_argument("--data", help="Location of the dataSet", required=True)
+	parser.add_argument("--labels", help="A json with train, test, and val labels", required=True)
 
 
 	args = parser.parse_args()
 
+	labels = json.load(open(args.labels))
+	trainFiles = labels['train']
+	valFiles = labels['val']
+	testFiles = labels['test']
 
 	if args.track:
 		tracks = json.load(open("../../data/divisions.json"))
 		assert args.track in tracks
 		tracks = tracks[args.track]
-		trainFiles = json.load(open("../../data/kleeTrainFiles.json"))[args.track]
-		valFiles = json.load(open("../../data/kleeValFiles.json"))[args.track]
-		testFiles = json.load(open("../../data/kleeTestFiles.json"))[args.track]
+		trainFiles = trainFiles[args.track]
+		valFiles = valFiles[args.track]
+		testFiles = testFiles[args.track]
 	else:
 		tracks=None
-		trainFiles = json.load(open("../../data/kleeTrainFiles.json"))
-		valFiles = json.load(open("../../data/kleeValFiles.json"))
-		testFiles = json.load(open("../../data/kleeTestFiles.json"))
+		
 	
 	trainLabels = [(key, trainFiles[key]) for key in trainFiles]
 	valLabels = [(key, valFiles[key]) for key in valFiles]
@@ -48,7 +52,7 @@ if __name__ == '__main__':
 
 	testTimes = [(key, testFiles[key]) for key in testFiles]
 
-	dataLoc = "../../data/SMTKlee/"
+	dataLoc = args.data
 
 	train_set = SMTDataset(trainLabels, dataLoc, args.edge_sets, tracks, args.cache)
 	val_set = SMTDataset(valLabels, dataLoc, args.edge_sets, tracks, args.cache)
@@ -74,4 +78,5 @@ if __name__ == '__main__':
 	returnString = str(args).replace("\'","").replace(",","").strip("Namespace").strip("(").strip(")").replace(" ","_") + "_" + str(int(time.time()))
 
 	np.savez_compressed(returnString+".npz", train_acc = train_acc, train_loss = train_loss, val_acc = val_acc, val_loss = val_loss, res=res, pred=pred)
+	json.dump(pred, open(returnString+".json", 'w'))
 	torch.save(model.state_dict(), returnString+".pt")
