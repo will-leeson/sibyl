@@ -78,11 +78,7 @@ class SMTDataset(GDataset):
         if self.cache is None or idx not in self.cache:
             path = os.path.join(self.data_dir, self.labels[idx][0][:-5]+".npz")
             
-            try:
-                data = np.load(path)
-            except FileNotFoundError:
-                print(path)
-                return (None, None)
+            data = np.load(path)
 
             nodes = torch.tensor(data['nodes']).float()
             edges = torch.tensor(data['edges']).long()
@@ -320,7 +316,7 @@ def evaluate(model, test_set, division, gpu=0, k=3):
     predicted = np.array(predicted)
     return res, predicted
 
-def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
+def smtEvaluate(model, test_set, files, test_times, gpu=0, k=3):
     '''
     Function used to evaluate model on test set
     '''
@@ -333,7 +329,7 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
     predSpot = np.array([0]*test_set[0][1].size(0))
     probCounter = np.array([0])
 
-    predicted = []
+    predicted = dict()
 
     model.eval()
 
@@ -348,6 +344,7 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
         with autocast():
             with torch.no_grad():
                 scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
+        predicted[files[i]] = scores.cpu().detach().tolist()
 
         for j in range(len(labels)):
             corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
@@ -358,8 +355,6 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
 
         bestPredicts += (scores.argmin(dim=1) == labels.argmin(dim=1)).sum().item()
         par2Score += labels[0][scores.argmin()].cpu().item()
-
-        predicted.append(scores)
 
         maxScoresIdx = scores.argmax(dim=1).reshape(len(scores),1)
         gather = labels.gather(1, maxScoresIdx)
@@ -374,7 +369,6 @@ def smtEvaluate(model, test_set, test_times, gpu=0, k=3):
         
     res = np.array([corr_sum/probCounter, topKAcc/probCounter, bestPredicts/probCounter, correctPredicts/possibleCorrect, predSpot, par2Score], dtype=object)
 
-    predicted = np.array(predicted)
     return res, predicted
 
 
