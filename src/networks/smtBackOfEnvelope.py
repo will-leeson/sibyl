@@ -27,6 +27,8 @@ machSMTFile = json.load(open("/p/graves/MachSMT/machChoice.json"))
 
 machSMTTimes = []
 machSMTConfusion = np.zeros((5,5), dtype=int)
+numOptimal = 0
+possible = 0
 badCount = 0
 for key in resultsFile:
     try:
@@ -38,10 +40,13 @@ for key in resultsFile:
 
     machSMTTimes.append(trueResult[result.argmin()])
     machSMTConfusion[result.argmin()][trueResult.argmin()]+=1
+    numOptimal+=result.argmin()==trueResult.argmin()
+    possible+=1
 
 print(np.sum(machSMTTimes))
 print(machSMTConfusion)
 print(badCount)
+print(numOptimal/possible)
 
 exit()
 
