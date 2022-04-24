@@ -2,7 +2,7 @@ import glob, csv, os, re
 import numpy as np
 from matplotlib import pyplot as plt
 
-name="kleeBalanceFull"
+name="DryadSynthRes"
 
 resultsFiles = glob.glob(name+"/*.npz")
 
@@ -19,27 +19,26 @@ full = []
 maxTen = {}
 for aFile in resultsFiles:
     numPasses = re.findall(r'[0-9]+', aFile.split("time_steps=")[1])[0]
-    pool = (aFile.split("pool_type=")[1]).split("_")[0]
-    mode = (aFile.split("mode=")[1]).split("_")[0]
-    trainingData = "_".join((aFile.split("track=")[1]).split("_")[:-1])
-    data_weight = (aFile.split("data_weight=")[1]).split("_")[0]
-    dropout = float((aFile.split("dropout=")[1]).split("_")[0])
+    pool = (aFile.split("pool_type=")[1]).split("_")[1]
+    mode = (aFile.split("mode=")[1]).split("_")[1]
+    trainingData = aFile.split("data=")[1].split("_")[1]
+    data_weight = (aFile.split("data_weight=")[1]).split("_")[1]
+    dropout = float((aFile.split("dropout=")[1]).split("_")[1])
 
 
     hasAST = "[AST" in aFile
     hasData = "Data" in aFile
     hasBackAST = "Back-AST" in aFile
 
-
-    data = np.load(aFile, allow_pickle=True)[result]
+    data = np.load(aFile, allow_pickle=True)['res']
 
     try:
         corr, correct, topkChoices, par2 = data[0], data[3], data[4], data[5]
     except:
         continue
 
-    if len(corr)>1:
-        continue
+    # if len(corr)>1:
+    #     continue
 
     topk = (topkChoices[0])/sum(topkChoices)
 
@@ -57,12 +56,12 @@ for aFile in resultsFiles:
     rawDataFile.writerow([numPasses ,pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout, corr, par2, aFile])
     if (numPasses,  pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout) in collatedData:
         collatedData[(numPasses,  pool, mode, trainingData, hasAST, hasData,hasBackAST, data_weight, dropout)].append([corr, topk, correct, par2]) 
-        topkDict[(numPasses,  pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout)].append(topkChoices)
+        # topkDict[(numPasses,  pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout)].append(topkChoices)
     else:
         collatedData[(numPasses,  pool, mode, trainingData, hasAST, hasData, hasBackAST, data_weight, dropout)] = [[corr, topk, correct, par2]]
-        topkDict[(numPasses,  pool, mode, trainingData, hasAST,hasData, hasBackAST, data_weight, dropout)] = [topkChoices]
+        # topkDict[(numPasses,  pool, mode, trainingData, hasAST,hasData, hasBackAST, data_weight, dropout)] = [topkChoices]
 
-collatedDataFile.writerow(["numPasses", "pool", "mode", "trainginData", "hasAST", "hasData", "hasBackAST", "data_weight", "dropout","corrMean", "corrSTD", "topk", "topkSTD", "correct", "correctSTD", "par2Mean", "par2STD", "num"])
+collatedDataFile.writerow(["numPasses", "pool", "mode", "trainginData", "hasAST", "hasData", "hasBackAST", "data_weight", "dropout","corrMean", "corrSTD", "topkMean", "topkStd", "correctMean", "correctStd", "par2Mean","par2Std", "num"])
 for key in collatedData:
     corrsMean = np.mean([x[0] for x in collatedData[key]])
     corrsStd =  np.std([x[0] for x in collatedData[key]])
@@ -74,22 +73,24 @@ for key in collatedData:
     par2Std =  np.std([x[3] for x in collatedData[key]])
 
     collatedData[key] = [corrsMean, corrsStd, topkMean, topkStd, correctMean, correctStd, par2Mean,par2Std, len(collatedData[key])]
+    # collatedData[key] = [corrsMean, corrsStd, len(collatedData[key])]
 
 for key in collatedData:
+    print(list(key)+collatedData[key])
     collatedDataFile.writerow(list(key)+collatedData[key])
 
-topKFile.writerow(["numPasses","pool", "mode", "trainginData", "hasAST", "hasData", "hasBackAST"])
-for key in topkDict:
-    vals = np.array(topkDict[key])
-    vals = np.array([[1-sum(data[0:x+1])/sum(data) for x in range(len(data))] for data in vals])
-    topkMeans = list(np.mean(vals, axis=0))
-    topkStds = list(np.std(vals, axis=0))
+# topKFile.writerow(["numPasses","pool", "mode", "trainginData", "hasAST", "hasData", "hasBackAST"])
+# for key in topkDict:
+#     vals = np.array(topkDict[key])
+#     vals = np.array([[1-sum(data[0:x+1])/sum(data) for x in range(len(data))] for data in vals])
+#     topkMeans = list(np.mean(vals, axis=0))
+#     topkStds = list(np.std(vals, axis=0))
     
-    data = topkMeans + topkStds
-    data[::2] = topkMeans
-    data[1::2] = topkStds
+#     data = topkMeans + topkStds
+#     data[::2] = topkMeans
+#     data[1::2] = topkStds
 
-    topKFile.writerow(list(key)+data)
+#     topKFile.writerow(list(key)+data)
 
 # for item in [opt_spear, opt_succ, full]:
 #     spear = [[],[],[],[],[]]
