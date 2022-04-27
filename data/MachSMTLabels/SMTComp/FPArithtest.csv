@@ -1,0 +1,7 @@
+benchmark,solver,score
+/p/graves/smtFiles/BVFP/20190429-UltimateAutomizerSvcomp2019/float_req_bl_0620b_true-unreach-call.c_1.smt2,solver0,2400
+/p/graves/smtFiles/BVFP/20190429-UltimateAutomizerSvcomp2019/float_req_bl_0620b_true-unreach-call.c_1.smt2,solver1,0.0418571
+/p/graves/smtFiles/BVFP/20190429-UltimateAutomizerSvcomp2019/float_req_bl_0620b_true-unreach-call.c_1.smt2,solver2,2400
+/p/graves/smtFiles/BVFP/20190429-UltimateAutomizerSvcomp2019/float_req_bl_0682a_true-unreach-call.c_3.smt2,solver0,2400
+/p/graves/smtFiles/BVFP/20190429-UltimateAutomizerSvcomp2019/float_req_bl_0682a_true-unreach-call.c_3.smt2,solver1,0.0888851
+/p/graves/smtFiles/BVFP/20190429-UltimateAutomizerSvcomp2019/float_req_bl_0682a_true-unreach-call.c_3.smt2,solver2,2400
