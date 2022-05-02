@@ -1,6 +1,3 @@
 [submodule "src/graph-builder"]
 	path = src/graph-builder
 	url = git@github.com:will-leeson/graph-builder.git
-[submodule "data/sv-benchmarks"]
-	path = data/sv-benchmarks
-	url = git@github.com:sosy-lab/sv-benchmarks.git
