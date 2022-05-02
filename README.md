@@ -8,4 +8,4 @@ To recreate the study in the paper, ensure you have the following dependencies o
 - [PyTorch 1.10.*](https://pytorch.org/) (CUDA not required, but highly recommended)
 - [PyTorch-Geometric 1.10.*](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) (CUDA not required, but highly recommended)
 - graphviz
--[pySMT](https://github.com/pysmt/pysmt)
+- [pySMT](https://github.com/pysmt/pysmt)
