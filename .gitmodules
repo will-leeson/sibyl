@@ -1,3 +1,0 @@
-[submodule "src/graph-builder"]
-	path = src/graph-builder
-	url = git@github.com:will-leeson/graph-builder.git
