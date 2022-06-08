@@ -121,3 +121,63 @@ class GAT(torch.nn.Module):
 
         # print("True Out", x.size())
         return x
+
+class GAT_SAVE(torch.nn.Module):
+    def __init__(self, passes, inputLayerSize, outputLayerSize, numAttentionLayers, mode, pool, k, dropout, shouldJump=True):
+        super(GAT, self).__init__()
+        self.passes = passes
+        self.mode = mode
+        self.k = 1
+        self.shouldJump = shouldJump
+            
+        self.gats = nn.ModuleList([GATv2Conv(inputLayerSize,inputLayerSize, heads=numAttentionLayers, concat=False, dropout=0, edge_dim=1) for i in range(passes)])
+        if self.passes and self.shouldJump:
+           self.jump = JumpingKnowledge(self.mode, channels=inputLayerSize, num_layers=self.passes)
+        if self.mode == 'cat' and self.shouldJump:
+            fcInputLayerSize = ((self.passes+1)*inputLayerSize*self.k)+1
+        else:
+            fcInputLayerSize = (inputLayerSize*self.k)+1
+        
+        if pool == "add":
+                self.pool = global_add_pool
+        elif pool == "mean":
+            self.pool = global_mean_pool
+        elif pool == "max":
+            self.pool = global_max_pool
+        elif pool == "sort":
+            self.pool = global_sort_pool
+            self.k = k
+        elif pool == "attention":
+            self.pool = GlobalAttention(gate_nn=nn.Sequential(torch.nn.Linear(fcInputLayerSize-1, 1), nn.LeakyReLU()))
+        elif pool == "multiset":
+            self.pool = GraphMultisetTransformer(in_channels=fcInputLayerSize-1, hidden_channels=fcInputLayerSize-1, out_channels=fcInputLayerSize-1, num_nodes=1400, num_heads=5, pool_sequences=["GMPool_I"])
+        else:
+            raise ValueError("Not a valid pool")
+
+        self.fc1 = nn.Linear(fcInputLayerSize, fcInputLayerSize//2)
+        self.fc2 = nn.Linear(fcInputLayerSize//2,fcInputLayerSize//2)
+        self.fcLast = nn.Linear(fcInputLayerSize//2, outputLayerSize)
+        self.dropout=nn.Dropout(dropout)
+    
+    def forward(self, x, edge_index, edge_attr, problemType, batch):
+        xs = [x]
+
+        for gat in self.gats: 
+            out = gat(x, edge_index, edge_attr=edge_attr)
+            x = f.leaky_relu(out)
+            xs += [x]
+
+        x = self.jump(xs)
+
+        x = self.pool(x, batch)
+        
+        x = torch.cat((x.reshape(1,x.size(0)*x.size(1)), problemType.unsqueeze(1)), dim=1)
+        
+        x = self.fc1(self.dropout(x))
+        x = f.leaky_relu(x)
+        x = self.fc2(self.dropout(x))
+        x = f.leaky_relu(x)
+        x = self.fcLast(self.dropout(x))
+
+        # print("True Out", x.size())
+        return x
