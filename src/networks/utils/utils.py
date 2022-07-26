@@ -316,7 +316,7 @@ def evaluate(model, test_set, division, gpu=0, k=3):
     predicted = np.array(predicted)
     return res, predicted
 
-def smtEvaluate(model, test_set, files, test_times, gpu=0, k=3):
+def smtEvaluate(model, test_set, files, gpu=0, k=3):
     '''
     Function used to evaluate model on test set
     '''

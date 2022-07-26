@@ -1,6 +1,6 @@
 from __future__ import division
 from gnn import GAT
-from utils.utils import ModifiedMarginRankingLoss, train_model, smtEvaluate, SMTDataset, getWeights
+from utils.utils import ModifiedMarginRankingLoss, train_model, SMTDataset, getWeights, smtEvaluate
 import torch, json, time, argparse
 import torch.optim as optim
 import numpy as np
@@ -26,13 +26,18 @@ if __name__ == '__main__':
 	parser.add_argument("--track", help="The track to train the network on", type=type(""), default=None)
 	parser.add_argument("--data", help="Location of the dataSet", required=True)
 	parser.add_argument("--labels", help="A json with train, test, and val labels", required=True)
+	parser.add_argument("--cross-valid", help="A json with train, test, and val labels", required=True, type=int)
 
 
 	args = parser.parse_args()
 
 	labels = json.load(open(args.labels))
-	trainFiles = labels['train']
-	valFiles = labels['val']
+
+	train = list(labels['train'].keys())
+	i = args.cross_valid
+	valFiles = {x:labels['train'][x] for x in train[(len(labels['train'])//10)*i:(len(labels['train'])//10)*(i+1)]}
+	trainFiles = {x:labels['train'][x] for x in train[:(len(labels['train'])//10)*i]+train[(len(labels['train'])//10)*(i+1):]}
+
 	testFiles = labels['test']
 
 	if args.track:
@@ -44,8 +49,7 @@ if __name__ == '__main__':
 		testFiles = testFiles[args.track]
 	else:
 		tracks=None
-		
-	
+
 	trainLabels = [(key, trainFiles[key]) for key in trainFiles]
 	valLabels = [(key, valFiles[key]) for key in valFiles]
 	testLabels = [(key, testFiles[key]) for key in testFiles]
@@ -64,7 +68,7 @@ if __name__ == '__main__':
 	#trainWeights = None
 	#valWeights = None
 
-	model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=train_set[0][0].x.size(1), outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, dropout=args.dropout, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
+	model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=67, outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, dropout=args.dropout, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
 
 	loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)
 	#loss_fn = torch.nn.NLLLoss()
@@ -73,10 +77,14 @@ if __name__ == '__main__':
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu, task='rank', k=1, trainWeights=trainWeights, valWeights=valWeights)
 	train_acc, train_loss, val_acc, val_loss = report
-	res, pred = smtEvaluate(model, test_set, testTimes, gpu=args.gpu)
 	
+	del args.data
+	del args.labels
+	del args.cache
+	del args.gpu
 	returnString = str(args).replace("\'","").replace(",","").strip("Namespace").strip("(").strip(")").replace(" ","_") + "_" + str(int(time.time()))
 
-	np.savez_compressed(returnString+".npz", train_acc = train_acc, train_loss = train_loss, val_acc = val_acc, val_loss = val_loss, res=res, pred=pred)
-	json.dump(pred, open(returnString+".json", 'w'))
+	res, pred = smtEvaluate(model, test_set, list(testFiles.keys()))
+
+	np.savez_compressed(returnString+".npz", train_acc = train_acc, train_loss = train_loss, val_acc = val_acc, val_loss = val_loss)
 	torch.save(model.state_dict(), returnString+".pt")
