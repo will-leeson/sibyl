@@ -8,7 +8,7 @@ To recreate the study in the paper, ensure you have the following dependencies o
 - [PyTorch 1.10.*](https://pytorch.org/) (CUDA not required, but highly recommended)
 - [PyTorch-Geometric 1.10.*](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) (CUDA not required, but highly recommended)
 - [pySMT](https://github.com/pysmt/pysmt)
-- [numpy] (https://numpy.org/)
+- [numpy](https://numpy.org/)
 
 While not necessary, we suggest you also install GNU [parallel](https://www.gnu.org/software/parallel/) to speed up graph construction.
 
