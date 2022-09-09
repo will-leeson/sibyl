@@ -11,7 +11,7 @@ Help()
    echo "options:"
    echo "h     Print this Help."
    echo "d     Location of .smt2 files."
-   echo "n     Parallel jobs to run"
+   echo "j     Parallel jobs to run"
    echo
 }
 
@@ -61,6 +61,6 @@ if [ $Parallel -gt 1 ] ; then
       echo "GNU parallel is not installed. Can't run $Parallel jobs"
       exit 1
    else
-      find $Directory -name "*.smt2" | parallel --bar -j $Parallel python3 src/graph_builder/walker.py 
+      find $Directory -name "*.smt2" | parallel --bar -j $Parallel python3 src/data_handlers/graph-builder.py 
    fi
 fi

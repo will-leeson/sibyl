@@ -3,7 +3,6 @@ from pysmt.walkers.identitydag import IdentityDagWalker
 from pysmt.smtlib.parser import SmtLibParser
 from pysmt.operators import op_to_str, ALL_TYPES
 import argparse
-import networkx as nx
 import numpy as np
 from pysmt.exceptions import PysmtTypeError
 
@@ -143,21 +142,8 @@ def main(parser):
 
     assert sum(edge_attr==0) == sum(edge_attr==1)
 
-    print("writing")
+#    print("writing")
     np.savez_compressed(file[:-5]+".npz", nodes=nodes, edges=edges, edge_attr=edge_attr)
-
-    # graph = nx.DiGraph()
-
-    # for i, node in enumerate(nodes):
-    #     graph.add_node(i, label=op_to_str(np.where(node)[0][0]) if node[-1]!=1 else "UberSymbol")
-
-    # for inEdge, outEdge, attr in zip(edges[0], edges[1], edge_attr):
-    #     graph.add_edge(inEdge, outEdge, label=attr)
-
-
-    # nx.drawing.nx_pydot.write_dot(graph, "thing.dot")
-
-
 
 
 if __name__ == "__main__":
