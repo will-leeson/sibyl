@@ -32,6 +32,12 @@ if __name__ == '__main__':
 
 	args = parser.parse_args()
 
+	device = None
+	if args.cpu:
+		device = "cpu"
+	else:
+		device = "cuda:"+str(args.gpu)
+
 	labels = json.load(open(args.labels))
 
 	train = list(labels['train'].keys())
@@ -69,14 +75,14 @@ if __name__ == '__main__':
 	#trainWeights = None
 	#valWeights = None
 
-	model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=67, outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, dropout=args.dropout, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
+	model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=67, outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, dropout=args.dropout, shouldJump=args.no_jump, pool=args.pool_type).to(device=device)
 
-	loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)
+	loss_fn = ModifiedMarginRankingLoss(margin=0.1, device=device).to(device=device)
 	#loss_fn = torch.nn.NLLLoss()
 
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
-	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu, task='rank', k=1, trainWeights=trainWeights, valWeights=valWeights)
+	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, device=device, task='rank', k=1, trainWeights=trainWeights, valWeights=valWeights)
 	train_acc, train_loss, val_acc, val_loss = report
 	
 	del args.data
