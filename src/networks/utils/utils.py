@@ -111,17 +111,17 @@ class SMTDataset(GDataset):
         return res
 
 class ModifiedMarginRankingLoss(nn.Module):
-    def __init__(self, margin=0,gpu=0):
+    def __init__(self, device, margin=0):
         super(ModifiedMarginRankingLoss, self).__init__()
         self.margin=margin
-        self.gpu = gpu
+        self.device = device
     
     def forward(self, scores, labels):
-        loss = torch.zeros(1).to(device=self.gpu)
+        loss = torch.zeros(1).to(device=self.device)
         indx = labels.argsort()
         for i, j in itertools.combinations(list(range(len(labels[0]))),2):
             loss_fn = MarginRankingLoss(margin=self.margin*abs(i-j))
-            loss += loss_fn(scores.gather(1, indx[:,i].unsqueeze(1)), scores.gather(1, indx[:,j].unsqueeze(1)), torch.tensor([1 if i > j else -1]*scores.size(0)).to(device=self.gpu))
+            loss += loss_fn(scores.gather(1, indx[:,i].unsqueeze(1)), scores.gather(1, indx[:,j].unsqueeze(1)),torch.ones_like(scores.gather(1, indx[:,j].unsqueeze(1))).to(device=self.device))
         return loss
 
 class topKLoss(nn.Module):
@@ -137,7 +137,7 @@ class topKLoss(nn.Module):
 
 
 
-def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs, gpu, task, k=1, trainWeights=None, valWeights=None):
+def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, scheduler, num_epochs, device, task, k=1, trainWeights=None, valWeights=None):
     '''
     Function used to train networks
     '''
@@ -166,8 +166,8 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         allocated = []
         for (i, (graphs, labels)) in enumerate(tqdm.tqdm(train_loader)):
             allocated.append(torch.cuda.memory_allocated())
-            graphs = graphs.to(device=gpu)
-            labels = labels.to(device=gpu)
+            graphs = graphs.to(device=device)
+            labels = labels.to(device=device)
             if task == "success" and labels.min()<2400:
                 continue
             if labels.min()<2400:
@@ -216,8 +216,8 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
         success_counter = 0
 
         for (i, (graphs,labels)) in enumerate(tqdm.tqdm(val_loader)):
-            graphs = graphs.to(device=gpu)
-            labels = labels.to(device=gpu)
+            graphs = graphs.to(device=device)
+            labels = labels.to(device=device)
             if task == "success" and labels.max()<0:
                 pass
             if labels.min()<2400:
@@ -255,7 +255,7 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
     
     return train_accuracies, train_losses, val_accuracies, val_losses
 
-def evaluate(model, test_set, division, gpu=0, k=3):
+def evaluate(model, test_set, division, device='cpu', k=3):
     '''
     Function used to evaluate model on test set
     '''
@@ -275,8 +275,8 @@ def evaluate(model, test_set, division, gpu=0, k=3):
     test_loader = torch_geometric.loader.DataLoader(dataset=test_set, batch_size=1)
 
     for (i, (graphs,labels)) in enumerate(tqdm.tqdm(test_loader, leave=False)):
-        graphs = graphs.to(device=gpu)
-        labels = labels.to(device=gpu)
+        graphs = graphs.to(device=device)
+        labels = labels.to(device=device)
         if torch.all(labels[0] == labels[0][0]):
             continue
         problemTypes = graphs.problemType

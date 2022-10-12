@@ -21,6 +21,7 @@ if __name__ == '__main__':
 	parser.add_argument("-g", "--gpu", help="Which GPU should the model be on", default=0, type=int)
 	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
 	parser.add_argument("--no-jump", help="Whether or not to use jumping knowledge", action="store_false", default=True)
+	parser.add_argument("--cpu", help="Whether or not to use cpu", action="store_true", default=False)
 	parser.add_argument("--data-weight", help="How to weight dataset: order, best, none (Default=none)", default='none', choices=['order','best','none'])
 	parser.add_argument("--dropout", help="Dropout Value (Default:0)", default=0, type=float)
 	parser.add_argument("--track", help="The track to train the network on", type=type(""), default=None)
@@ -33,6 +34,12 @@ if __name__ == '__main__':
 
 
 	args = parser.parse_args()
+
+	device = None
+	if args.cpu:
+		device = "cpu"
+	else:
+		device = "cuda:"+str(args.gpu)
 
 	labels = json.load(open(args.labels))
 
@@ -76,12 +83,12 @@ if __name__ == '__main__':
 	else:
 		model = EGC(passes=args.time_steps, inputLayerSize=67, outputLayerSize=len(trainLabels[0][1]), pool=args.pool_type, aggregators=args.aggregators, shouldJump=args.no_jump).to(device=args.gpu)
 
-	loss_fn = ModifiedMarginRankingLoss(margin=0.1, gpu=args.gpu).to(device=args.gpu)
+	loss_fn = ModifiedMarginRankingLoss(margin=0.1, device=device).to(device=device)
 	#loss_fn = torch.nn.NLLLoss()
 
 	optimizer = optim.Adam(model.parameters(), lr = 1e-3, weight_decay=1e-4)
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
-	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, gpu=args.gpu, task='rank', k=1, trainWeights=trainWeights, valWeights=valWeights)
+	report = train_model(model=model, loss_fn = loss_fn, batchSize=1, trainset=train_set, valset=val_set, optimizer=optimizer, scheduler=scheduler, num_epochs=args.epochs, device=device, task='rank', k=1, trainWeights=trainWeights, valWeights=valWeights)
 	train_acc, train_loss, val_acc, val_loss = report
 	
 	del args.data
