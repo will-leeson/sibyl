@@ -1,7 +1,8 @@
-from os import error
-from tkinter.messagebox import NO
+from typing import List, Optional, Tuple
 import torch
+from torch import Tensor
 from torch._C import Value
+from torch_geometric.typing import Adj
 import torch.nn as nn
 import torch.nn.functional as f
 from torch_geometric.nn import GATv2Conv, GatedGraphConv, JumpingKnowledge, global_max_pool, global_mean_pool, global_add_pool, global_sort_pool, GlobalAttention, GraphMultisetTransformer, SumAggregation, MeanAggregation, MaxAggregation, MinAggregation, PowerMeanAggregation, SoftmaxAggregation, AttentionalAggregation, EquilibriumAggregation, EGConv, MultiAggregation
@@ -68,7 +69,7 @@ class EGC(torch.nn.Module):
         self.fc2 = nn.Linear(fcInputLayerSize//2,fcInputLayerSize//2)
         self.fcLast = nn.Linear(fcInputLayerSize//2, outputLayerSize)
 
-    def forward(self, x, edge_index, batch, problemType=torch.FloatTensor([1])):
+    def forward(self, x: Tensor, edge_index: Adj, batch: Tensor, problemType=torch.FloatTensor([1])):
         if self.shouldJump:
             xs = [x]
 
@@ -83,13 +84,7 @@ class EGC(torch.nn.Module):
 
         x = self.pool(x, batch.long())
 
-        try:
-            x = torch.cat((x, problemType.unsqueeze(1).cuda()), dim=1)
-        except Exception as e:
-            print(e)
-            print(problemType.unsqueeze(1))
-            print(x.size())
-            exit()
+        x = torch.cat((x, problemType.unsqueeze(1).cuda()), dim=1)
 
         x = self.fc1(x)
         x = f.leaky_relu(x)
@@ -97,49 +92,6 @@ class EGC(torch.nn.Module):
         x = f.leaky_relu(x)
         x = self.fcLast(x)
 
-        return x
-
-class GGNN(nn.Module):
-    '''
-    Base GGNN class
-    This Graph Neural Network includes a GRU to produce new node representations
-    '''
-    def __init__(self, passes, numEdgeSets, inputLayerSize, outputLayerSize, collate):
-        super(GGNN, self).__init__()
-        self.ggcs = nn.ModuleList([GatedGraphConv(inputLayerSize, outputLayerSize, aggr=collate) for _ in range(numEdgeSets)])
-        self.passes = passes
-        self.fc1 = nn.Linear(inputLayerSize+1, 80)
-        self.fc2 = nn.Linear(80,80)
-        self.fcLast = nn.Linear(80, outputLayerSize)
-        self.collate=collate
-
-    def forward(self, data):
-        x, edge_index, problemType = data.x, data.edge_index, data.problemType
-
-        x = f.dropout(x, p=0.6, training=self.training)
-
-        for _ in range(self.passes):
-            placeholderX = torch.zeros_like(x)
-            for val, gcn in zip(torch.unique(data.edge_attr), self.ggcs):
-                placeholderX += gcn(x, edge_index.transpose(0,1)[(data.edge_attr==val).squeeze()].transpose(0,1))
-            x = placeholderX/len(torch.unique(data.edge_attr))
-
-        x = f.dropout(x, p=0.6, training=self.training)
-        if self.collate == "sum":
-            x = global_add_pool(x, data.batch, dim=0)
-        elif self.collate == "mean":
-            x = global_mean_pool(x, data.batch, dim=0)
-        elif self.collate == "max":
-            x, _ = global_max_pool(x, data.batch, dim=0)
-        else:
-            raise ValueError("Not a valid collate type")
-
-        x = torch.cat((x, problemType), dim=1)
-        x = self.fc1(x)
-        x = f.leaky_relu(x)
-        x = self.fc2(x)
-        x = f.leaky_relu(x)
-        x = self.fcLast(x)
         return x
 
 class GAT(torch.nn.Module):
