@@ -19,16 +19,18 @@ The BMC, SymEx, and SyGuS datasets can be found [here](https://doi.org/10.5281/z
 To recreate the study in our paper, we have provided scripts to download the datasets, convert the queries into graphs, and train and evaluate models. Below, we provide instructions on how to use them.
 
 ### get_dataset.sh 
-This script will download and extract the given dataset to the data directory (BMC,SymEx, SgyGuS, or COMP):
+This script will download and extract the given dataset to the data directory (BMC,SymEx, SyGuS, COMP, QF_Bitvec, QF_Equality+Bitvec, Equality+LinearArith):
 
 `./get_dataset.sh [dataset] `
+
+Downloading the SMT-Comp datasets can take a while as download speeds are limited to ~5mb/s. To save time, we provide downloads of the individual categories we cover in depth in the paper (QF_Bitvec, QF_Equality+Bitvec, Equality+LinearArith). The download of the datasets we created is not as bad, but extracting them can take a while as there are roughly 100,000 queries in each. The time scales with size, so SyGuS is fastest, then SymEx, and finally BMC.
 
 ### build_graphs.sh
 This script will find all smt2 files in a given directory and run the graph builder on them. If gnu parallel is install and the -j flag is set, n graphs will be built in parallel.
 
 `./build_graphs.sh -d [dir] [-j n]`
 
-This may take a while for any SE dataset, as there are ~100,000 queries in each, so we suggest you use the precomputed graphs we include in provided in our datasets.
+This may take a while for any SE dataset, as there are ~100,000 queries in each, so we suggest you use the precomputed graphs we include in provided in our dataset [archive](https://zenodo.org/record/7065631).
 
 ### smtTrainer.py
 This script will train and evaluate models with the parameters we use in our studies. There are configurable parameters, like how many iterations of message passing or whether or not to include jumping knowledge layers. To see configurable parameters beyond these two, see `src/networks/smtTrainer.py` 
