@@ -1,5 +1,5 @@
 from __future__ import division
-from gnn import GAT, EGC
+from gnn import GAT
 from utils.utils import ModifiedMarginRankingLoss, train_model, SMTDataset, getWeights, smtEvaluate
 import torch, json, time, argparse
 import torch.optim as optim
@@ -17,7 +17,6 @@ if __name__ == '__main__':
 	parser.add_argument("-e", "--epochs", help="Number of training epochs (Default=20)", default=20, type=int)
 	parser.add_argument("--edge-sets", help="Which edges sets to include: AST, 'Back-AST', Data(Default=All)", nargs='+', default=['AST', 'Back-AST', 'Data'], choices=['AST', 'Back-AST', 'Data'])
 	parser.add_argument("-m", "--mode", help="Mode for jumping (Default cat): max, cat, lstm", default="cat", choices=['max', 'cat', 'lstm'])
-	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, sort, attention, multiset)", default="mean", choices=["max", "mean","add","sort","attention","multiset"])
 	parser.add_argument("-g", "--gpu", help="Which GPU should the model be on", default=0, type=int)
 	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
 	parser.add_argument("--no-jump", help="Whether or not to use jumping knowledge", action="store_false", default=True)
@@ -28,9 +27,7 @@ if __name__ == '__main__':
 	parser.add_argument("--data", help="Location of the dataSet", required=True)
 	parser.add_argument("--labels", help="A json with train, test, and val labels", required=True)
 	parser.add_argument("--cross-valid", help="A json with train, test, and val labels", required=True, type=int)
-	parser.add_argument('-n','--net', help="GAT, EGC", default="EGC", choices=["GAT", "EGC"])
 	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, attention, power, softmax, equilibrium)", default=["attention"], choices=["max",'min', "mean","add","attention","power","softmax","equilibrium"], nargs='+')
-	parser.add_argument("--aggregators", help="How to pool Nodes (max, mean, add, attention, power, softmax, equilibrium)", default=["attention"], choices=["max",'min', "mean","symnorm","std"], nargs='+')
 
 
 	args = parser.parse_args()
@@ -77,11 +74,7 @@ if __name__ == '__main__':
 
 	#trainWeights = None
 	#valWeights = None
-	model =None
-	if args.net == "GAT":
-		model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=67, outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, dropout=args.dropout, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
-	else:
-		model = EGC(passes=args.time_steps, inputLayerSize=67, outputLayerSize=len(trainLabels[0][1]), pool=args.pool_type, aggregators=args.aggregators, shouldJump=args.no_jump).to(device=args.gpu)
+	model = GAT(passes=args.time_steps, numAttentionLayers=5, inputLayerSize=67, outputLayerSize=len(trainLabels[0][1]), mode=args.mode, k=20, dropout=args.dropout, shouldJump=args.no_jump, pool=args.pool_type).to(device=args.gpu)
 
 	loss_fn = ModifiedMarginRankingLoss(margin=0.1, device=device).to(device=device)
 	#loss_fn = torch.nn.NLLLoss()
