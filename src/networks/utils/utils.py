@@ -188,10 +188,11 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
             model.float()
             optimizer.step()
 
+            scores = -scores
             for j in range(len(labels)):
                 if torch.all(labels[0] == labels[0][0]):
                     continue
-                corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
+                corr, _ = spearmanr(labels[j].cpu().detach(), (scores[j]).cpu().detach().tolist())
                 corr_sum+=corr
                 assert corr <=1, str(corr) + " " + str(scores) + " " + str(labels)
                 _, scoreTopk = (-scores).topk(k)
@@ -346,6 +347,7 @@ def smtEvaluate(model, test_set, files, gpu=0, k=3):
                 scores = model(graphs.x, graphs.edge_index, graphs.edge_attr, graphs.problemType, graphs.batch)
         predicted[files[i]] = scores.cpu().detach().tolist()
 
+        scores = -scores
         for j in range(len(labels)):
             corr, _ = spearmanr(labels[j].cpu().detach(), scores[j].cpu().detach().tolist())
             corr_sum += corr
