@@ -27,7 +27,7 @@ if __name__ == '__main__':
 	parser.add_argument("--data", help="Location of the dataSet", required=True)
 	parser.add_argument("--labels", help="A json with train, test, and val labels", required=True)
 	parser.add_argument("--cross-valid", help="A json with train, test, and val labels", required=True, type=int)
-	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, attention, power, softmax, equilibrium)", default=["attention"], choices=["max",'min', "mean","add","attention","power","softmax","equilibrium"], nargs='+')
+	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, attention, power, softmax, equilibrium)", default="attention", choices=["max",'min', "mean","add","attention","power","softmax","equilibrium"])
 
 
 	args = parser.parse_args()
