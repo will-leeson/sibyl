@@ -15,4 +15,4 @@ src/data_handlers/*.png
 src/data_handlers/*.csv
 data/**.html
 data/**.xml
-**/__pychache__
+**/__pychache__/*

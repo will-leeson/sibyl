@@ -5,14 +5,24 @@ This is the implementation of the Sibyl technique introduced in the paper "Sibyl
 To recreate the study in the paper, ensure you have the following dependencies on your machine:
 
 - Python3
-- [PyTorch 1.10.*](https://pytorch.org/) (CUDA not required, but highly recommended)
-- [PyTorch-Geometric 1.10.*](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) (CUDA not required, but highly recommended)
-- [pySMT](https://github.com/pysmt/pysmt)
-- [numpy](https://numpy.org/)
+- [PyTorch >= 1.10](https://pytorch.org/) (CUDA not required, but highly recommended)
+- [PyTorch-Geometric >= 1.10](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) (CUDA not required, but highly recommended if you want to train a model)
+- [pySMT >= 0.9](https://github.com/pysmt/pysmt)
+- [numpy >= 1.20](https://numpy.org/)
 
 While not necessary, we suggest you also install GNU [parallel](https://www.gnu.org/software/parallel/) to speed up graph construction.
 
 The BMC, SymEx, and SyGuS datasets can be found [here](https://doi.org/10.5281/zenodo.6521827). The SMT-COMP dataset can be found on StarExec via the [SMT-COMP website](https://smt-comp.github.io/2021/benchmarks.html)
+
+### Docker
+To simplify using the artifact, we have dockerized it. Assuming you have [Docker](https://docs.docker.com/engine/install/ubuntu/) installed, you can build and run the image using the following command (assuming you are currently in the directory of the project):
+
+```bash
+sudo docker build -t sibyl .
+sudo docker run -i -t sibyl:latest
+```
+
+You should now be in a shell with the required dependencies. From here you can recreate are study using the scripts we describe below.
 
 ## Study
 
