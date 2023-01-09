@@ -231,7 +231,8 @@ def train_model(model, loss_fn, batchSize, trainset, valset, optimizer, schedule
                     elif task == "topk" or task == "success":
                         loss = loss_fn(nn.functional.log_softmax(scores, dim=1), labels.argmin(dim=1))    
                     cum_loss+=loss.cpu().detach().item()
-
+            
+            scores = -scores
             for j in range(len(labels)):
                 if torch.all(labels[0] == labels[0][0]):
                     continue
