@@ -22,7 +22,7 @@ sudo docker build -t sibyl .
 sudo docker run -i -t sibyl:latest
 ```
 
-You should now be in a shell with the required dependencies. From here you can recreate are study using the scripts we describe below.
+You should now be in a shell with the required dependencies. From here you can recreate our study using the scripts we describe below.
 
 ## Study
 
