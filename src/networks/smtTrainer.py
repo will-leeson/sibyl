@@ -1,4 +1,3 @@
-from __future__ import division
 from gnn import GAT
 from utils.utils import ModifiedMarginRankingLoss, train_model, SMTDataset, getWeights, smtEvaluate
 import torch, json, time, argparse
@@ -6,7 +5,7 @@ import torch.optim as optim
 import numpy as np
 
 '''
-File - netTrainer.py
+File - smtTrainer.py
 
 This file is a driver used to train networks
 '''
