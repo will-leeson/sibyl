@@ -53,6 +53,5 @@ elif [ -z "${PORTFOLIO}" ]; then
 else
     python3 src/data_handlers/graph-builder.py $QUERY
     GRAPH_FILE="${QUERY%.*}.npz"
-    echo $GRAPH_FILE
     python3 src/networks/inference.py --model $MODEL -t 2 --query $GRAPH_FILE --portfolio $PORTFOLIO
 fi

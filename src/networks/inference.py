@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
 	model = GAT(passes=args.time_steps, inputLayerSize=67, outputLayerSize=len(portfolio), numAttentionLayers=5, mode=args.mode, k=20, dropout=args.dropout, shouldJump=args.no_jump, pool=args.pool_type)
 
-	model.load_state_dict(torch.load(args.model))
+	model.load_state_dict(torch.load(args.model, map_location='cpu'))
 
 	res = -model(x=graph.x, edge_index=graph.edge_index, edge_attr=graph.edge_attr, problemType=torch.tensor([0]), batch=torch.zeros(query['nodes'].shape[0]).long())
 

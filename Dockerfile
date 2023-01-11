@@ -11,4 +11,8 @@ RUN pip install pyg-lib torch-scatter torch-sparse torch-cluster torch-spline-co
 
 RUN pip install pysmt
 
-WORKDIR /home
+RUN mkdir /home/sibyl
+
+COPY . /home/sibyl
+
+WORKDIR /home/sibyl
