@@ -7,7 +7,7 @@ Help()
    # Display Help
    echo "Build graphs from SMT Queries"
    echo
-   echo "Syntax: ./make_graphs [-h|d|n]"
+   echo "Syntax: ./build_graphs [-h|d|n]"
    echo "options:"
    echo "h     Print this Help."
    echo "d     Location of .smt2 files."

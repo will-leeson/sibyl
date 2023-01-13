@@ -21,6 +21,21 @@ elif [[ "$CHOICE" == "SyGuS" ]]; then
     wget https://zenodo.org/record/6521827/files/SyGuS.tar.gz?download=1 -P data/SyGuS/
     echo "Extracting download. This may take a several minutes"
     tar -xvf data/SyGuS/SyGuS.tar.gz?download=1 -C data/SyGuS/
+elif [[ "$CHOICE" == "BMC-graph" ]]; then
+    echo "You have selected BMC-graph. Dowloading into data/BMC/"
+    wget https://zenodo.org/record/6521827/files/BMC_Graphs.tar.gz?download=1 -P data/BMC/
+    echo "Extracting download. This may take a several minutes"
+    tar -xvf data/BMC/BMC.tar.gz?download=1 -C data/BMC/
+elif [[ "$CHOICE" == "SymEx" ]]; then
+    echo "You have selevcted SymEx-graph. Dowloading into data/SymEx"
+    wget https://zenodo.org/record/6521827/files/SymEx_Graphs.tar.gz?download=1 -P data/SymEx/
+    echo "Extracting download. This may take a several minutes"
+    tar -xvf data/SymEx/SymEx.tar.gz?download=1 -C data/SymEx/
+elif [[ "$CHOICE" == "SyGuS" ]]; then
+    echo "You have selected SyGuS-graph. Dowloading into data/SyGuS/"
+    wget https://zenodo.org/record/6521827/files/SyGuS_Graphs.tar.gz?download=1 -P data/SyGuS/
+    echo "Extracting download. This may take a several minutes"
+    tar -xvf data/SyGuS/SyGuS.tar.gz?download=1 -C data/SyGuS/ 
 elif [[ "$CHOICE" == "COMP" ]]; then
     echo "You have selected Comp. Dowloading into data/"
     wget "https://www.starexec.org/starexec/secure/download?includesolvers=false&includebenchmarks=true&useIdDirectories=false&token=96955963&type=space&hierarchy=true&id=445203" -P data/Comp
@@ -67,5 +82,5 @@ elif [[ "$CHOICE" == "Equality+LinearArith" ]]; then
     done
 else
     echo "$CHOICE is not a valied option."
-    echo "Valid options include BMC, SymEx, SyGuS, or COMP"
+    echo "Valid options include BMC, SymEx, SyGuS, BMC-graph, SymEx-graph, SyGuS-graph, COMP, QF_Bitvec, QF_Equality+Bitvec, or Equality+LinearArith"
 fi
