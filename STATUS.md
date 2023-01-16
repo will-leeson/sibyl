@@ -1,0 +1,3 @@
+# Status
+
+We are applying for the Functional, Reusable, and Available badges. We provide sufficient documentation in the README for functionality and for other researchers to reuse our artifact for their purposes. The artifact is available because the [repository](https://github.com/will-leeson/sibyl) and our [datasets](https://zenodo.org/record/7065631), has been made public and links are provided in our ICSE paper.

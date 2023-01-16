@@ -1,0 +1,5 @@
+UltimateEliminator+MathSAT-5.6.6
+cvc5
+smtinterpol-2.5
+veriT
+z3-4.8.11

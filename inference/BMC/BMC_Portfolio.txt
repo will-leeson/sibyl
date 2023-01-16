@@ -1,0 +1,6 @@
+Bitwuzla
+STP 2021.0
+Yices 2.6.2 for SMTCOMP 2021
+cvc5
+mathsat-5.6.6
+z3-4.8.11

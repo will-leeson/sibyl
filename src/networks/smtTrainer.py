@@ -1,4 +1,3 @@
-from __future__ import division
 from gnn import GAT
 from utils.utils import ModifiedMarginRankingLoss, train_model, SMTDataset, getWeights, smtEvaluate
 import torch, json, time, argparse
@@ -6,7 +5,7 @@ import torch.optim as optim
 import numpy as np
 
 '''
-File - netTrainer.py
+File - smtTrainer.py
 
 This file is a driver used to train networks
 '''
@@ -21,12 +20,12 @@ if __name__ == '__main__':
 	parser.add_argument("--cache", help="If activated, will cache dataset in memory", action='store_true')
 	parser.add_argument("--no-jump", help="Whether or not to use jumping knowledge", action="store_false", default=True)
 	parser.add_argument("--cpu", help="Whether or not to use cpu", action="store_true", default=False)
-	parser.add_argument("--data-weight", help="How to weight dataset: order, best, none (Default=none)", default='none', choices=['order','best','none'])
+	parser.add_argument("--data-weight", help="How to weight dataset: order, best, none (Default=none)", default='best', choices=['order','best','none'])
 	parser.add_argument("--dropout", help="Dropout Value (Default:0)", default=0, type=float)
 	parser.add_argument("--track", help="The track to train the network on", type=type(""), default=None)
 	parser.add_argument("--data", help="Location of the dataSet", required=True)
 	parser.add_argument("--labels", help="A json with train, test, and val labels", required=True)
-	parser.add_argument("--cross-valid", help="A json with train, test, and val labels", required=True, type=int)
+	parser.add_argument("--cross-valid", help="A json with train, test, and val labels", default=0, type=int)
 	parser.add_argument("--pool-type", help="How to pool Nodes (max, mean, add, attention, power, softmax, equilibrium)", default="attention", choices=["max",'min', "mean","add","attention","power","softmax","equilibrium"])
 
 
