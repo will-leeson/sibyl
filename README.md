@@ -64,8 +64,10 @@ Next, it will begin training a model using the computed graphs using the label f
              Training Network                 
 ==============================================
 
- 10%|████████                                                                      | 88/855 [00:06<00:52, 14.51it/s]Train-epoch 0, Avg-Loss: 2.9436, Avg-Corr:0.316, TopK-Acc:0.1444, Success-Acc:0.9444
- 21%|████████████████                                                             | 178/855 [00:11<00:46, 14.59it/s]Train-epoch 0, Avg-Loss: 2.8463, Avg-Corr:0.3441, TopK-Acc:0.1444, Success-Acc:0.9722
+ 10%|████████                                                                      | 88/855 [00:06<00:52, 14.51it/s]
+ Train-epoch 0, Avg-Loss: 2.9436, Avg-Corr:0.316, TopK-Acc:0.1444, Success-Acc:0.9444
+ 21%|████████████████                                                             | 178/855 [00:11<00:46, 14.59it/s]
+ Train-epoch 0, Avg-Loss: 2.8463, Avg-Corr:0.3441, TopK-Acc:0.1444, Success-Acc:0.9722
  31%|████████████████████████▏                                                    | 269/855 [00:18<00:23, 24.78it/s]
 ```
 
