@@ -1,5 +1,18 @@
 # Sibyl - An Algorithm selector for SMT solvers
 
+## Table of Contents
+1. [About](#about)
+2. [Quickstart Guide](#quick-start-guide)
+    1. [Running the Study](#running-the-study)
+    2. [Inference](#inference)
+    3. [Docker](#docker)
+3. [Full Study](#full-study)
+    1. [Downloading Datasets](#get_datasetsh)
+    2. [Generating Graphs](#build_graphssh)
+    3. [Training Models](#smttrainerpy)
+    4. [Performing Inference](#inferencesh)
+
+## About
 This is the implementation of the Sibyl technique introduced in the paper "Sibyl: Improving Software Engineering Tools with SMT Selections". The paper can be found [here](Sibyl_ICSE_Paper.pdf).
 
 To recreate the study in the paper, ensure you have the following dependencies on your machine:
@@ -11,9 +24,83 @@ To recreate the study in the paper, ensure you have the following dependencies o
 - [numpy >= 1.20](https://numpy.org/)
 - [GNU parallel](https://www.gnu.org/software/parallel/) (Only needed to speed up graph construction)
 
-While not necessary, we suggest you also install GNU [parallel](https://www.gnu.org/software/parallel/) to speed up graph construction.
-
 The BMC, SymEx, and SyGuS datasets can be found [here](https://doi.org/10.5281/zenodo.6521827). The SMT-COMP dataset can be found on StarExec via the [SMT-COMP website](https://smt-comp.github.io/2021/benchmarks.html)
+
+
+## Quick-Start Guide
+Here is a quick guide to training and running models. For an in-depth discussion of the scripts and what they do, see [below](#full-study).
+
+### Cloning the repo
+Start by cloning the repo. We suggest setting the depth flag to 1, otherwise there will be a lot of unneeded data downloaded.
+
+```bash
+git clone --depth 1 https://github.com/will-leeson/sibyl.git
+```
+
+### Running the Study
+To run the study for a given dataset, run the following command:
+```
+./run_study.sh -d [dataset] -j [Num_Cores]
+```
+
+Acceptable options for the -d flag are BMC, SyGuS, SymEx, or ICSE.
+Running the study end-to-end will takes somewhere between 4-24 hours depending on the dataset. To observe each component of the study in a reasonable time frame, we provide a subset of the BMC dataset, [ICSE](data/ICSE/), in the [data](data/) directory. End-to-End, this should take roughly 10 minutes. To perform the study with the ICSE dataset with 4 CPU cores for graph generation, run the following command:
+
+```bash
+./run_study.sh -d ICSE -j 4
+```
+
+First, the script will check NVIDIA support. This is required to train models. If it is found, it will begin computing graph representations for each SMT query. If you allow for parallel computation, GNU Parallel will produce a progress bar with an estimated time remaining. Will 4 CPUs, it took us 3 minutes to perform this step.
+```
+==============================================
+              Building Graphs                 
+==============================================
+100% 1000:0=0s data/ICSE/seq-3_termination_Query87.smt2
+```
+
+Next, it will begin training a model using the computed graphs using the label file [ICSE_GNN_Labels.json](data/ICSE_GNN_Labels.json) located in the [data](data) folder. To save time, we perform only 5 epochs of training, as opposed to 25 epochs in our study. Training will show a progress bar and will print statistics, such as Loss, Correlation, Top-K accuracy, etc., throughout the process.
+```
+==============================================
+             Training Network                 
+==============================================
+
+ 10%|████████                                                                      | 88/855 [00:06<00:52, 14.51it/s]Train-epoch 0, Avg-Loss: 2.9436, Avg-Corr:0.316, TopK-Acc:0.1444, Success-Acc:0.9444
+ 21%|████████████████                                                             | 178/855 [00:11<00:46, 14.59it/s]Train-epoch 0, Avg-Loss: 2.8463, Avg-Corr:0.3441, TopK-Acc:0.1444, Success-Acc:0.9722
+ 31%|████████████████████████▏                                                    | 269/855 [00:18<00:23, 24.78it/s]
+```
+
+Once training finishes, a model weight file and a NumPy archive will be saved in the current directory. It is named according to options used to train the model and the time the model was created. Our model is called ``time_steps=2_epochs=5_edge_sets=\[AST_Back-AST_Data\]_mode=cat_no_jump=True_cpu=False_data_weight=best_dropout=0_track=None_cross_valid=0_pool_type=attention_1674068225.pt''. This model can be used to perform inference, which we describe in the next section.
+
+### Inference
+You can perform inference on an arbitrary model using the following command:
+```bash
+./inference.sh -m [/path/to/model] -q [/path/to/query] -p [/path/to/portfolio_file]
+```
+
+The argument to the -m flag is the path to pre-trained model. The argument to the -q flag is the path to an SMT query. The argument to the -p flag is portfolio file. This is a text file where each line is an SMT solver in the portfolio of solvers the model was trained to select from in the same order as the labeled dataset. In the inference directory, there is a subdirectory for each SE domain. In each subdirectory is the portfolio file for the domain, a directory containing pre-trained models for the domain, and a directory containing several queries from each domain.
+
+To perform inference on the query [cp_query_56.smt2](/inference/SymEx/example_queries/cp_query_56.smt2) with the pre-trained SymEx model [SymEx_model_0.pt](/inference/SymEx/model_checkpoints/SymEx_model_0.pt), I would run the following command:
+```bash
+./inference.sh -m inference/SymEx/model_checkpoints/SymEx_model_0.pt -q inference/SymEx/example_queries/cp_query_56.smt2 -p inference/SymEx/SymEx_Portfolio.txt
+```
+
+The output of this command will look like this:
+```
+==============================================
+              Building Graphs                 
+==============================================
+==============================================
+           Performing Inference               
+==============================================
+
+Predicted Order:
+STP 2021.0
+Bitwuzla
+z3-4.8.11
+Yices 2.6.2 for SMTCOMP 2021
+mathsat-5.6.6
+cvc5
+```
 
 ### Docker
 To simplify using the artifact, we have dockerized it. Assuming you have [Docker](https://docs.docker.com/engine/install/ubuntu/) installed, you can build and run the image using the following command (assuming you are currently in the directory of the project):
@@ -23,47 +110,9 @@ sudo docker build -t sibyl .
 sudo docker run -i -t sibyl:latest
 ```
 
-You should now be in a shell with the required dependencies. From here you can recreate our study using the scripts we describe below. Be wary, the docker container we provide will not have access to the GPU. As a result, training will be rather infeasible (Training a model for 25 epochs was listed as taking >1,000 hours on CPU alone). The docker container is a great way to do model inference as this is much cheaper than training. 
+You should now be in a shell with the required dependencies. From here you can recreate our study using the scripts we describe below. Be wary, the docker container we provide will not have access to the GPU. As a result, training will not be feasible (Training a model for 25 epochs was listed as taking >1,000 hours on CPU alone). The docker container is a great way to do model inference as this is much cheaper than training. 
 
-## Quick-Start Guide
-Here is a quick guide to training and running models. For an in-depth discussion of the scripts and what they do, see [below](#study).
-
-### Train a model
-To train a model, you will need to download at least one of our datasets and compute graph representations of each query in the dataset. This can be done with the following command by replacing \[dataset\] with one of the following: BMC, SymEx, SyGuS, COMP, QF_Bitvec, QF_Equality+Bitvec, Equality+LinearArith. 
-
-```
-./get_dataset.sh [dataset] 
-```
-
-This script will put the datasets in the data folder. This can take anywhere from 5-15 minutes for most dataset, the COMP dataset can take a bit longer. If you wish to speed things up, you can download the precomputed graphs for BMC, SymEx, or SyGuS with BMC-graph, SymEx-graph, or SyGuS-graph. These datasets are rather large, so graph computation can take a while.
-
-### Compute Graphs
-Skip this step if you downloaded the precomputed graphs. To compute graphs for all queries in a dataset run the following command:
-
-```
-./build_graphs -d [/path/to/dataset/] -j [num_cores]
-```
-
-The argument to the -d flag is the location of the dataset and the argument to -j flag is the level of parallelism to use. In order to use the -j flag GNU parallel must be installed and be in your path. 
-
-### Training
-To train a model, we need a labeled dataset. At this point, the previous steps should provide you with a dataset of precomputed graphs. We provide labels for each of these datasets in the data directory named \[dataset\]_GNN_Labels.json, where \[dataset\] is the dataset you are interested in (BMC, SymEx, SyGuS). Using the following command, you can train a model with the same setting we use in the study:
-
-```
-python3 src/networks/smtTrainer.py -t 2 --data [/path/to/dataset] --labels [/path/to/labels] -e 25 --cross-valid [0-9]
-```
-
-WARNING - Training can take a while GPU acceleration, and is generally infeasible without it. We suggest only training with GPU acceleration and to save time, reduce the number of epochs from 25 to 5 using the -e flag.
-
-### Inference
-With a trained model, you can perform inference on an arbitrary model using the following command:
-```
-./inference.sh -m [/path/to/model] -q [/path/to/query] -p [/path/to/portfolio_file]
-```
-
-The argument to the -m flag is the path to pre-trained model. The argument to the -q flag is the path to an SMT query. The argument to the -p flag is portfolio file. This is a text file where each line is an SMT solver in the portfolio of solvers the model was trained to select from in the same order as the labeled dataset. In the inference directory, there is a subdirectory for each SE domain. In each subdirectory is the portfolio file for the domain, a directory containing pre-trained models for the domain, and a directory containing several queries from each domain.
-
-## Study
+## Full Study
 
 To recreate the study in our paper, we have provided scripts to download the datasets, convert the queries into graphs, and train and evaluate models. Below, we provide instructions on how to use them.
 
