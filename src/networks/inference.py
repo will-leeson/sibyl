@@ -33,6 +33,6 @@ if __name__ == '__main__':
 	res = -model(x=graph.x, edge_index=graph.edge_index, edge_attr=graph.edge_attr, problemType=torch.tensor([0]), batch=torch.zeros(query['nodes'].shape[0]).long())
 
 	print()
-	print("Predicted Order:")
+	print("Predicted Order (Best to Worst): ")
 	for i in res.argsort()[0]:
 		print(portfolio[i])

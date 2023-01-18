@@ -51,7 +51,14 @@ elif [ -z "${PORTFOLIO}" ]; then
     echo "This is a required argument. "
     echo "Please input the path to a portfolio file"
 else
+    echo ""
+    echo "=============================================="
+    echo "              Building Graphs                 "
+    echo "=============================================="
     python3 src/data_handlers/graph-builder.py $QUERY
     GRAPH_FILE="${QUERY%.*}.npz"
+    echo "=============================================="
+    echo "           Performing Inference               "
+    echo "=============================================="
     python3 src/networks/inference.py --model $MODEL -t 2 --query $GRAPH_FILE --portfolio $PORTFOLIO
 fi

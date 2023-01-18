@@ -120,7 +120,7 @@ class GAT(torch.nn.Module):
             self.pool = global_sort_pool
             self.k = k
         elif pool == "attention":
-            self.pool = GlobalAttention(gate_nn=nn.Sequential(torch.nn.Linear(fcInputLayerSize-1, 1), nn.LeakyReLU()))
+            self.pool = AttentionalAggregation(gate_nn=nn.Sequential(torch.nn.Linear(fcInputLayerSize-1, 1), nn.LeakyReLU()))
         elif pool == "multiset":
             self.pool = GraphMultisetTransformer(in_channels=fcInputLayerSize-1, hidden_channels=fcInputLayerSize-1, out_channels=fcInputLayerSize-1, num_nodes=1400, num_heads=5, pool_sequences=["GMPool_I"])
         else:

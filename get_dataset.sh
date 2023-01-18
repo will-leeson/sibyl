@@ -8,34 +8,34 @@ fi
 
 if [[ "$CHOICE" == "BMC" ]]; then
     echo "You have selected BMC. Dowloading into data/BMC/"
-    wget https://zenodo.org/record/6521827/files/BMC.tar.gz?download=1 -P data/BMC/
+    wget https://zenodo.org/record/7541839/files/BMC.tar.gz?download=1 -P data/
     echo "Extracting download. This may take a several minutes"
-    tar -xvf data/BMC/BMC.tar.gz?download=1 -C data/BMC/
+    tar -xvf data/BMC.tar.gz?download=1 -C data/
 elif [[ "$CHOICE" == "SymEx" ]]; then
     echo "You have selevcted SymEx. Dowloading into data/SymEx"
-    wget https://zenodo.org/record/6521827/files/SymEx.tar.gz?download=1 -P data/SymEx/
+    wget https://zenodo.org/record/7541839/files/SymEx.tar.gz?download=1 -P data/
     echo "Extracting download. This may take a several minutes"
-    tar -xvf data/SymEx/SymEx.tar.gz?download=1 -C data/SymEx/
+    tar -xvf data/SymEx.tar.gz?download=1 -C data/
 elif [[ "$CHOICE" == "SyGuS" ]]; then
     echo "You have selected SyGuS. Dowloading into data/SyGuS/"
-    wget https://zenodo.org/record/6521827/files/SyGuS.tar.gz?download=1 -P data/SyGuS/
+    wget https://zenodo.org/record/7541839/files/SyGuS.tar.gz?download=1 -P data/
     echo "Extracting download. This may take a several minutes"
-    tar -xvf data/SyGuS/SyGuS.tar.gz?download=1 -C data/SyGuS/
+    tar -xvf data/SyGuS.tar.gz?download=1 -C data/
 elif [[ "$CHOICE" == "BMC-graph" ]]; then
     echo "You have selected BMC-graph. Dowloading into data/BMC/"
-    wget https://zenodo.org/record/6521827/files/BMC_Graphs.tar.gz?download=1 -P data/BMC/
+    wget https://zenodo.org/record/7541839/files/BMC_Graphs.tar.gz?download=1 -P data/
     echo "Extracting download. This may take a several minutes"
-    tar -xvf data/BMC/BMC.tar.gz?download=1 -C data/BMC/
-elif [[ "$CHOICE" == "SymEx" ]]; then
+    tar -xvf data/BMC_Graphs.tar.gz?download=1 -C data/
+elif [[ "$CHOICE" == "SymEx-graph" ]]; then
     echo "You have selevcted SymEx-graph. Dowloading into data/SymEx"
-    wget https://zenodo.org/record/6521827/files/SymEx_Graphs.tar.gz?download=1 -P data/SymEx/
+    wget https://zenodo.org/record/7541839/files/SymEx_Graphs.tar.gz?download=1 -P data/
     echo "Extracting download. This may take a several minutes"
-    tar -xvf data/SymEx/SymEx.tar.gz?download=1 -C data/SymEx/
-elif [[ "$CHOICE" == "SyGuS" ]]; then
+    tar -xvf data/SymEx_Graphs.tar.gz?download=1 -C data/
+elif [[ "$CHOICE" == "SyGuS-graph" ]]; then
     echo "You have selected SyGuS-graph. Dowloading into data/SyGuS/"
-    wget https://zenodo.org/record/6521827/files/SyGuS_Graphs.tar.gz?download=1 -P data/SyGuS/
+    wget https://zenodo.org/record/7541839/files/SyGuS_Graphs.tar.gz?download=1 -P data/
     echo "Extracting download. This may take a several minutes"
-    tar -xvf data/SyGuS/SyGuS.tar.gz?download=1 -C data/SyGuS/ 
+    tar -xvf data/SyGuS_Graphs.tar.gz?download=1 -C data/ 
 elif [[ "$CHOICE" == "COMP" ]]; then
     echo "You have selected Comp. Dowloading into data/"
     wget "https://www.starexec.org/starexec/secure/download?includesolvers=false&includebenchmarks=true&useIdDirectories=false&token=96955963&type=space&hierarchy=true&id=445203" -P data/Comp
