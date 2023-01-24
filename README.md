@@ -165,3 +165,6 @@ For each SE domain, we provide several pre-trained models and example queries fr
 ```
 ./inference.sh -m inference/SyGuS/model_checkpoints/SyGuS_model_0.pt -q inference/SyGuS/example_queries/1.c_Query7038.smt2 -p inference/SyGuS/SyGuS_Portfolio.txt
 ```
+
+## Acknowledgements
+This material is based in part upon work supported by the National Science Foundation under award 2129824, by the DARPA ARCOS program under contract FA8750-20-C-0507, by The Air Force Office of Scientific Research under award number FA9550-21-0164, and by Lockheed Martin Advanced Technology Laboratories.
