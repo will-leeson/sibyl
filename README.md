@@ -24,7 +24,7 @@ To recreate the study in the paper, ensure you have the following dependencies o
 - [numpy >= 1.20](https://numpy.org/)
 - [GNU parallel](https://www.gnu.org/software/parallel/) (Only needed to speed up graph construction)
 
-The BMC, SymEx, and SyGuS datasets can be found [here](https://doi.org/10.5281/zenodo.6521827). The SMT-COMP dataset can be found on StarExec via the [SMT-COMP website](https://smt-comp.github.io/2021/benchmarks.html)
+The BMC, SymEx, and SyGuS datasets can be found [on Zenodo](https://doi.org/10.5281/zenodo.6521826). The SMT-COMP dataset can be found on StarExec via the [SMT-COMP website](https://smt-comp.github.io/2021/benchmarks.html)
 
 
 ## Quick-Start Guide
