@@ -47,6 +47,11 @@ if __name__ == '__main__':
 	res = -model(x=graph.x, edge_index=graph.edge_index, edge_attr=graph.edge_attr, problemType=torch.tensor([0]), batch=torch.zeros(query['nodes'].shape[0]).long())
 
 	print()
-	print("Predicted Order and Real Solver time: ")
-	for i, spot in enumerate(res.argsort()[0]):
-		print(str(i+1)+":",portfolio[spot],"("+str(true_result[spot])+")")
+	if true_result is None:
+		print("Predicted Order: ")
+		for i, spot in enumerate(res.argsort()[0]):
+			print(str(i+1)+":",portfolio[spot])
+	else:
+		print("Predicted Order and Real Solver time: ")
+		for i, spot in enumerate(res.argsort()[0]):
+			print(str(i+1)+":",portfolio[spot],"("+str(true_result[spot])+")")
