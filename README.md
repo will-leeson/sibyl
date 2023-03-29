@@ -13,7 +13,7 @@
     4. [Performing Inference](#inferencesh)
 
 ## About
-This is the implementation of the Sibyl technique introduced in the paper "Sibyl: Improving Software Engineering Tools with SMT Selections". The paper can be found [here](Sibyl_ICSE_Paper.pdf).
+This is the implementation of the Sibyl technique introduced in the paper "Sibyl: Improving Software Engineering Tools with SMT Selections". The paper can be found [here](Sibyl_ICSE_Paper.pdf) (Note, the paper is not under the GPL-3 License. Its under [IEEE eCF](https://www.ieee.org/publications/rights/copyright-main.html)).
 
 To recreate the study in the paper, ensure you have the following dependencies on your machine:
 
