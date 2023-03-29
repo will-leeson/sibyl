@@ -1,5 +1,5 @@
 from gnn import GAT
-import torch, json, time, argparse
+import torch, json, argparse, os
 import torch.optim as optim
 import numpy as np
 from torch_geometric.data import Data
@@ -18,8 +18,22 @@ if __name__ == '__main__':
 	parser.add_argument("--query", help="The query to perform inference on", required=True)
 	parser.add_argument("--model", help="The model to perform inference with", required=True)
 	parser.add_argument("--portfolio", help="A file containing the SMT Solver in your portfolio", required=True)
+	parser.add_argument("--data-set", help="The dataset the query comes from")
 
 	args = parser.parse_args()
+
+	true_result = None
+	if args.data_set is not None:
+		data_set_1 = json.load(open(args.data_set))
+		data_set = data_set_1['train']
+		data_set.update(data_set_1['test'])
+		data_set_keys = list(data_set.keys())
+		query = os.path.basename(args.query)[:-4]+".smt2"
+		for key in data_set_keys:
+			if query in key:
+				query = key
+				break
+		true_result = np.array(data_set[query])
 
 	portfolio = [x.strip() for x in open(args.portfolio).readlines()]
 
@@ -33,6 +47,6 @@ if __name__ == '__main__':
 	res = -model(x=graph.x, edge_index=graph.edge_index, edge_attr=graph.edge_attr, problemType=torch.tensor([0]), batch=torch.zeros(query['nodes'].shape[0]).long())
 
 	print()
-	print("Predicted Order (Best to Worst): ")
-	for i in res.argsort()[0]:
-		print(portfolio[i])
+	print("Predicted Order and Real Solver time: ")
+	for i, spot in enumerate(res.argsort()[0]):
+		print(str(i+1)+":",portfolio[spot],"("+str(true_result[spot])+")")

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-while getopts 'm:q:p:h' opt; do
+while getopts 'm:q:p:d:h' opt; do
     case "$opt" in
         m)
             if test -f "$OPTARG"; then
@@ -29,8 +29,17 @@ while getopts 'm:q:p:h' opt; do
                 exit 1
             fi
             ;;
+        d)
+            if test -f "$OPTARG"; then
+                DATASET="$OPTARG"
+            else
+                echo "$OPTARG does not exists." 
+                echo "Please input the path to a correct dataset file."
+                exit 1
+            fi
+            ;;
         ?|h)
-            echo "Usage: $(basename $0) [-m model] [-q query]"
+            echo "Usage: $(basename $0) [-m model] [-q query] [-p portfolio] [-d dataset]"
             exit 1
             ;;
     esac
@@ -60,5 +69,9 @@ else
     echo "=============================================="
     echo "           Performing Inference               "
     echo "=============================================="
-    python3 src/networks/inference.py --model $MODEL -t 2 --query $GRAPH_FILE --portfolio $PORTFOLIO
+    if [ -z "${DATASET}" ]; then
+        python3 src/networks/inference.py --model $MODEL -t 2 --query $GRAPH_FILE --portfolio $PORTFOLIO 
+    else
+        python3 src/networks/inference.py --model $MODEL -t 2 --query $GRAPH_FILE --portfolio $PORTFOLIO --data-set $DATASET
+    fi
 fi
