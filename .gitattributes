@@ -1,2 +1,2 @@
-data/ICSE/*.smt2 linguist-vendored
+data/ICSE/* linguist-vendored
 **/*.smt2 linguist-vendored
