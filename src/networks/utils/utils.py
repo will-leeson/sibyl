@@ -19,47 +19,9 @@ File - utils.py
 This file defines some utility functions
 '''
 
-class GeometricDataset(GDataset):
-    def __init__(self, labels, data_dir, edge_sets, should_cache=False):
-        self.labels = labels
-        self.data_dir = data_dir
-        self.edge_sets = edge_sets
-        if should_cache:
-            self.cache = dict()
-        else:
-            self.cache = None 
-    
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, idx):
-        res = None
-        if (not self.cache) or (idx not in self.cache):
-            path = os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+".npz")
-            edges = np.load(os.path.join(self.data_dir, self.labels[idx][0].split("|||")[0]+"Edges.npz"))
-
-            edges_tensor = [torch.from_numpy(edges[edgeSet]) for edgeSet in self.edge_sets]
-
-            edge_labels = torch.cat([torch.full((len(edges_tensor[i]),1),i) for i in range(len(edges_tensor))], dim=0).float()        
-            edges_tensor = torch.cat(edges_tensor).transpose(0,1).long()
-
-            data = np.load(path)
-            tokens = torch.from_numpy(data['node_rep'])
-
-            label = torch.tensor(self.labels[idx][1])
-            problemType = torch.tensor([float(self.labels[idx][0].split("|||")[1])])
-
-            res = Data(x=tokens.float(), edge_index=edges_tensor, edge_attr=edge_labels, problemType=problemType),label
-
-        if self.cache is not None and idx not in self.cache:
-            self.cache[idx] = res
-        elif self.cache:
-            res = self.cache[idx]
-
-        return res
-
 class SMTDataset(GDataset):
     def __init__(self, labels, data_dir, edge_sets, tracks=None,should_cache=False):
+        super(SMTDataset,self).__init__()
         self.labels = labels
         self.data_dir = data_dir
         self.edge_sets = edge_sets
@@ -70,10 +32,10 @@ class SMTDataset(GDataset):
         
         self.problemTypes = tracks
 
-    def __len__(self):
+    def len(self):
         return len(self.labels)
 
-    def __getitem__(self, idx):
+    def get(self, idx):
         res=None
         if self.cache is None or idx not in self.cache:
             path = os.path.join(self.data_dir, self.labels[idx][0][:-5]+".npz")
@@ -374,21 +336,6 @@ def smtEvaluate(model, test_set, files, gpu=0, k=3):
 
     return res, predicted
 
-
-def getCorrectProblemTypes(labels, problemTypes):
-    '''
-    Function used to make sure we are only looking at problem types that we want
-    '''
-    if "overflow" not in problemTypes:
-	    labels = [item for item in labels if item[0].split("|||")[1]!="0"]
-    if "reachSafety" not in problemTypes:
-    	labels = [item for item in labels if item[0].split("|||")[1]!="1"]
-    if "termination" not in problemTypes:
-        labels = [item for item in labels if item[0].split("|||")[1]!="2"]
-    if "memSafety" not in problemTypes:
-        labels = [item for item in labels if item[0].split("|||")[1]!="3"]
-
-    return labels
 
 def groupLabels(labels, mapping="../../data/toolMapping.json"):
     toolToAlg, algToTool = json.load(open(mapping))
